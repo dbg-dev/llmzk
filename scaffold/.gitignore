@@ -1,58 +1,58 @@
 # Runtime vault content is ignored by default so the scaffold stays reusable.
 # Remove or adjust these rules if this vault repo should track actual notes.
 
-00 Inbox/**
-!00 Inbox/
-!00 Inbox/.gitkeep
+# 00 Inbox/**
+# !00 Inbox/
+# !00 Inbox/.gitkeep
 
-00 Fleeting Notes/**
-!00 Fleeting Notes/
-!00 Fleeting Notes/.gitkeep
+# 00 Fleeting Notes/**
+# !00 Fleeting Notes/
+# !00 Fleeting Notes/.gitkeep
 
-01 Sources/**
-!01 Sources/
-!01 Sources/.gitkeep
+# 01 Sources/**
+# !01 Sources/
+# !01 Sources/.gitkeep
 
-02 Literature Notes/**
-!02 Literature Notes/
-!02 Literature Notes/.gitkeep
+# 02 Literature Notes/**
+# !02 Literature Notes/
+# !02 Literature Notes/.gitkeep
 
-03 Permanent Notes/**
-!03 Permanent Notes/
-!03 Permanent Notes/.gitkeep
+# 03 Permanent Notes/**
+# !03 Permanent Notes/
+# !03 Permanent Notes/.gitkeep
 
-04 Concept Notes/**
-!04 Concept Notes/
-!04 Concept Notes/.gitkeep
+# 04 Concept Notes/**
+# !04 Concept Notes/
+# !04 Concept Notes/.gitkeep
 
-05 Bridge Notes/**
-!05 Bridge Notes/
-!05 Bridge Notes/.gitkeep
+# 05 Bridge Notes/**
+# !05 Bridge Notes/
+# !05 Bridge Notes/.gitkeep
 
-06 Contradiction Notes/**
-!06 Contradiction Notes/
-!06 Contradiction Notes/.gitkeep
+# 06 Contradiction Notes/**
+# !06 Contradiction Notes/
+# !06 Contradiction Notes/.gitkeep
 
-07 Index Notes/**
-!07 Index Notes/
-!07 Index Notes/.gitkeep
+# 07 Index Notes/**
+# !07 Index Notes/
+# !07 Index Notes/.gitkeep
 
-08 Wiki Articles/**
-!08 Wiki Articles/
-!08 Wiki Articles/.gitkeep
+# 08 Wiki Articles/**
+# !08 Wiki Articles/
+# !08 Wiki Articles/.gitkeep
 
-09 Media/**
-!09 Media/
-!09 Media/.gitkeep
+# 09 Media/**
+# !09 Media/
+# !09 Media/.gitkeep
 
-Logs/**
-!Logs/
-!Logs/Passports/
-!Logs/Passports/.gitkeep
-!Logs/Decision Logs/
-!Logs/Decision Logs/.gitkeep
-!Logs/Review Queue/
-!Logs/Review Queue/.gitkeep
+# Logs/**
+# !Logs/
+# !Logs/Passports/
+# !Logs/Passports/.gitkeep
+# !Logs/Decision Logs/
+# !Logs/Decision Logs/.gitkeep
+# !Logs/Review Queue/
+# !Logs/Review Queue/.gitkeep
 
 # Local/cache noise
 .venv/
