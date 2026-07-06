@@ -1,0 +1,16 @@
+[project]
+name = "llmzk"
+version = "0.5.0"
+description = "OpenCode + Obsidian Zettelkasten harness installer and scaffold"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+llmzk-init = "llmzk.init:main"
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 100

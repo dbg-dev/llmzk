@@ -1,0 +1,20 @@
+# Python
+.venv/
+**/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# OS/editor noise
+.DS_Store
+__MACOSX/
+
+# Packaging
+/dist/
+/build/
+*.egg-info/
+
+# Local test vaults
+/tmp-vault*/
+llmzk-test-vault*/
