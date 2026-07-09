@@ -7,18 +7,43 @@ Git is the safety layer for this installed `llmzk` vault.
 For broad `llmzk` operations, use Git as the transaction boundary:
 
 ```text
-inspect -> candidate inventory -> write -> audit -> diff -> stage -> commit/revert
+preflight -> candidate inventory -> write -> cleanup -> audit -> diff -> stage -> commit/revert
 ```
 
 Recommended procedure:
 
-1. Start from a clean working tree where possible.
-2. Run the `llmzk` command.
-3. Run audit and any normalizers.
-4. Inspect `git status` and `git diff`.
-5. Stage only accepted files.
-6. Commit with a message that references the passport and decision log.
-7. Revert or discard changes that failed review.
+1. Run `/llmzk-git-preflight` or the command's built-in preflight step.
+2. Stop if the working tree is dirty, unless the user explicitly approves mixing new generated changes with existing edits.
+3. Produce the candidate inventory before writing durable notes.
+4. Write notes, passports, and decision logs.
+5. Run frontmatter cleanup where relevant.
+6. Run audit.
+7. Show a concise Git diff summary.
+8. Stage only accepted files.
+9. Commit with a message that references the passport and decision log.
+10. Revert or discard changes that failed review.
+
+## Strict preflight rule
+
+Before broad write commands such as `/llmzk-ingest`, `/llmzk-promote`, and `/llmzk-synthesize`, run:
+
+```bash
+uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py preflight .
+```
+
+If preflight fails, do not continue unless the user explicitly says to continue with mixed changes.
+
+## Doctor check
+
+Use `/llmzk-doctor` after installation, after updating the harness, and when command behaviour seems inconsistent.
+
+The strict doctor mode is:
+
+```bash
+uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_doctor.py . --fail-if-dirty
+```
+
+This checks the installed scaffold, OpenCode paths, templates, Git repo, folder placeholders, and config references.
 
 ## Agent rules
 
@@ -35,11 +60,11 @@ RTK is an inspection aid; Git remains the source of truth.
 
 ## Default `.gitignore` stance
 
-By default, generated content in numbered folders and `Logs/` is ignored so the scaffold stays clean.
-This is appropriate for a reusable public scaffold.
+In an installed vault, generated durable notes and `Logs/` are tracked by default.
+This is intentional: Git safety only works if generated notes, passports, decision logs, and review queues are visible to `git status` and `git diff`.
 
-If this is your real private vault and you want Git to version your notes, remove or relax those ignore rules.
-A common private-vault policy is to track generated durable notes and logs, but keep raw inbox/media private.
+If a private vault should not track raw inputs or large media, add local ignore rules for `00 Inbox/`, `00 Fleeting Notes/`, or `09 Media/`.
+Do not ignore durable output folders such as `01 Sources/`, `02 Literature Notes/`, `03 Permanent Notes/`, `04 Concept Notes/`, `05 Bridge Notes/`, `06 Contradiction Notes/`, `07 Index Notes/`, `08 Wiki Articles/`, or `Logs/` unless you deliberately disable Git review for generated output.
 
 ## Commit message shape
 

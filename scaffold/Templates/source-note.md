@@ -1,6 +1,6 @@
 ---
 type: source
-status: raw
+status: ingested
 schema_version: 1
 title: Source title
 author: Author name

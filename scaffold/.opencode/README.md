@@ -28,9 +28,10 @@ Logs/             = generated passports, decision logs, review queues
 Run from the vault root:
 
 ```bash
+uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_doctor.py .
 uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_audit.py .
 uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py status
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py diff --stat
+uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py diff . --stat
 ```
 
 Agents may inspect Git state freely, but must not stage, commit, reset, clean, or

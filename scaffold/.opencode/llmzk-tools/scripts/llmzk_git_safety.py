@@ -168,13 +168,10 @@ def cmd_revert_run(args: argparse.Namespace) -> int:
     for p in paths:
         print(f"- {p}")
     print()
-    if args.dry_run:
+    if not args.apply:
         print("Dry run only. No files changed.")
         print("To apply, rerun with --apply after explicit user approval.")
         return 0
-    if not args.apply:
-        print("Refusing to modify files without --apply.")
-        return 1
 
     for p in paths:
         rel = Path(p)
@@ -219,8 +216,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("revert-run", help="Revert files associated with a passport")
     p.add_argument("passport")
     p.add_argument("path", nargs="?", default=".")
-    p.add_argument("--dry-run", action="store_true", default=True)
-    p.add_argument("--apply", action="store_true")
+    p.add_argument("--dry-run", action="store_true", help="Preview only; this is the default")
+    p.add_argument("--apply", action="store_true", help="Apply the revert after explicit user approval")
     p.set_defaults(func=cmd_revert_run)
     return parser
 

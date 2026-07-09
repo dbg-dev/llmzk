@@ -15,4 +15,10 @@ Use `.opencode/commands/`, `.opencode/agents/`, and `.opencode/skills/` as the O
 Use `Templates/` as note templates.
 Treat the numbered folders and `Logs/` as vault-owned working content.
 
+Before any broad write operation, run Git preflight. If the working tree is dirty, stop unless the user explicitly says to continue with mixed changes.
+
+After any broad write operation, run frontmatter cleanup when relevant, run audit, and show a concise Git diff summary.
+
+Use `/llmzk-doctor` after installation, after harness updates, or when command behaviour looks inconsistent.
+
 Do not stage, commit, reset, clean, or revert Git changes unless the user explicitly asks.

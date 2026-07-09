@@ -1,6 +1,6 @@
 [project]
 name = "llmzk-tools"
-version = "0.6.0"
+version = "0.6.1"
 description = "Small Python utilities for the llmzk OpenCode/Obsidian harness"
 readme = "README.md"
 requires-python = ">=3.11"

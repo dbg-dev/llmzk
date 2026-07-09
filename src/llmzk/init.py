@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from llmzk.doctor import run_doctor
+
 VAULT_FOLDERS = [
     "00 Inbox",
     "00 Fleeting Notes",
@@ -157,10 +159,21 @@ def cmd_init(args: argparse.Namespace) -> int:
         if args.commit:
             initial_commit(vault)
 
+    if args.doctor:
+        print("\nRunning llmzk doctor...")
+        code, findings = run_doctor(vault, fail_if_dirty=False, quiet_ok=True)
+        for finding in findings:
+            print(f"[{finding.level.upper()}] {finding.message}")
+        if code != 0:
+            print("Doctor reported issues. Review the messages above before using the vault.", file=sys.stderr)
+
     print("\nCreated llmzk vault scaffold.")
     print("Next:")
     print(f"  cd {vault}")
+    if args.git and not args.commit:
+        print("  git add . && git commit -m \"llmzk: initialize vault scaffold\"")
     print("  opencode")
+    print("  /llmzk-doctor")
     print("  /llmzk-git-status")
     print("  /llmzk-ingest 00 Inbox/<source>.md")
     return 0
@@ -188,6 +201,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Initialize a Git repository in the vault",
     )
     parser.add_argument("--commit", action="store_true", help="Create an initial scaffold commit")
+    parser.add_argument(
+        "--doctor",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Run llmzk doctor after installing the scaffold",
+    )
     return parser
 
 

@@ -34,8 +34,10 @@ Create when warranted:
 5. Use the installed `obsidian-markdown` skill for Obsidian syntax details.
 6. Use wikilinks with link context.
 7. Use MathJax for math.
-8. Write passport and decision log.
-9. Run or recommend a light audit.
+8. For source notes in `01 Sources/`, use `status: ingested`, not `status: raw`; raw material lives in `00 Inbox/`.
+9. When generalising backpropagation equations beyond sigmoid activations, say “differentiable elementwise activation functions” rather than “any activation function.”
+10. Write passport and decision log.
+11. Run or recommend a light audit.
 
 ## Read these llmzk references
 

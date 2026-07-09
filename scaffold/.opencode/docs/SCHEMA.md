@@ -6,7 +6,7 @@ This schema defines llmzk-specific properties. For general Obsidian property/fro
 
 ```yaml
 type: concept | permanent | bridge | contradiction | index | source | literature | wiki-article
-status: raw | seed | active | reviewed | synthesized | archived
+status: seed | active | reviewed | synthesized | archived | ingested | partial | deprecated
 schema_version: 1
 ```
 
@@ -44,6 +44,23 @@ derived_from:
 
 All wikilinks in frontmatter must be quoted strings of the form `"[[...]]"`.
 Do not use nested YAML list syntax such as `- - - Source`.
+
+## Status conventions
+
+Use status values narrowly. In particular:
+
+- `00 Inbox/` contains raw material and usually does not need llmzk frontmatter.
+- source notes in `01 Sources/` should use `status: ingested` once wrapped as source notes.
+- source notes may use `status: partial` if only partly processed.
+- source notes may use `status: deprecated` if superseded by another source note.
+- concept, permanent, bridge, contradiction, and index notes usually use `seed`, `active`, or `reviewed`.
+- synthesized article outputs may use `synthesized`.
+
+Do not use `status: raw` for processed source notes in `01 Sources/`; raw material lives in `00 Inbox/`.
+
+## Mathematical wording
+
+When generalising backpropagation equations beyond sigmoid activations, prefer precise wording such as: “The equations are not specific to sigmoid activations; they apply to differentiable elementwise activation functions, with the activation derivative changed accordingly.” Avoid saying they hold for “any activation function.”
 
 ## Note types
 
