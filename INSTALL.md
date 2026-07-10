@@ -14,7 +14,7 @@ Use symlink mode while developing the scaffold:
 uv run llmzk-init ~/Vaults/MyResearchVault --mode symlink --git --commit
 ```
 
-The vault is initialized as its own Git repository. Git safety commands operate on the vault repo, not the upstream `llmzk` repo. Generated durable notes and Logs are Git-visible by default so diffs can be reviewed. Use `--commit` to create the initial scaffold checkpoint; otherwise create one manually before the first broad llmzk run.
+The installer CLI uses `tyro`; Git operations use `GitPython`. The vault is initialized as its own Git repository. Git safety commands operate on the vault repo, not the upstream `llmzk` repo. Generated durable notes and Logs are Git-visible by default so diffs can be reviewed. Use `--commit` to create the initial scaffold checkpoint; otherwise create one manually before the first broad llmzk run.
 
 
 After install, from inside the vault:

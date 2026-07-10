@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import argparse
-import json
-import subprocess
+import json as json_lib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+
+from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
+import tyro
 
 VAULT_FOLDERS = [
     "00 Inbox",
@@ -89,21 +90,10 @@ REQUIRED_TEMPLATES = [
 ]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Finding:
     level: str
     message: str
-
-
-def run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        cmd,
-        cwd=cwd,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
 
 
 def add(findings: list[Finding], level: str, message: str) -> None:
@@ -119,20 +109,26 @@ def check_exists(findings: list[Finding], root: Path, rel_paths: Iterable[str], 
             add(findings, "fail", f"Missing {kind}: {rel}")
 
 
+def find_repo(root: Path) -> Repo | None:
+    try:
+        return Repo(root, search_parent_directories=True)
+    except (InvalidGitRepositoryError, NoSuchPathError):
+        return None
+
+
 def check_git(findings: list[Finding], root: Path, *, fail_if_dirty: bool) -> None:
-    result = run(["git", "rev-parse", "--show-toplevel"], root)
-    if result.returncode != 0:
+    repo = find_repo(root)
+    if repo is None or repo.working_tree_dir is None:
         add(findings, "fail", "Vault is not inside a Git repository")
         return
 
-    git_root = Path(result.stdout.strip())
+    git_root = Path(repo.working_tree_dir).resolve()
     if git_root != root:
         add(findings, "warn", f"Git root is {git_root}, not the supplied vault root {root}")
     else:
         add(findings, "ok", "Git repository detected at vault root")
 
-    status = run(["git", "status", "--porcelain=v1"], root)
-    dirty = [line for line in status.stdout.splitlines() if line.strip()]
+    dirty = [line for line in repo.git.status("--porcelain=v1").splitlines() if line.strip()]
     if not dirty:
         add(findings, "ok", "Git working tree is clean")
     else:
@@ -145,8 +141,8 @@ def check_opencode_config(findings: list[Finding], root: Path) -> None:
     if not path.exists():
         return
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
+        data = json_lib.loads(path.read_text(encoding="utf-8"))
+    except json_lib.JSONDecodeError as exc:
         add(findings, "fail", f"opencode.json is not valid JSON: {exc}")
         return
     instructions = data.get("instructions", [])
@@ -168,11 +164,7 @@ def check_gitignore(findings: list[Finding], root: Path) -> None:
     if not path.exists():
         return
     text = path.read_text(encoding="utf-8")
-    required_fragments = [
-        ".venv/",
-        "__MACOSX/",
-        ".DS_Store",
-    ]
+    required_fragments = [".venv/", "__MACOSX/", ".DS_Store"]
     for frag in required_fragments:
         if frag in text:
             add(findings, "ok", f".gitignore contains: {frag}")
@@ -183,8 +175,8 @@ def check_gitignore(findings: list[Finding], root: Path) -> None:
 def check_git_visibility(findings: list[Finding], root: Path) -> None:
     # Git safety depends on generated durable notes and run logs being visible to Git.
     # If these are ignored, git diff/status cannot be the review boundary.
-    repo = run(["git", "rev-parse", "--show-toplevel"], root)
-    if repo.returncode != 0:
+    repo = find_repo(root)
+    if repo is None:
         add(findings, "warn", "Skipping Git visibility checks because vault is not a Git repository")
         return
     probes = [
@@ -200,11 +192,14 @@ def check_git_visibility(findings: list[Finding], root: Path) -> None:
         "Logs/Decision Logs/__llmzk_doctor_probe__.md",
     ]
     for rel in probes:
-        result = run(["git", "check-ignore", "-q", rel], root)
-        if result.returncode == 0:
+        try:
+            repo.git.check_ignore("-q", rel)
             add(findings, "fail", f"Git safety issue: generated output would be ignored: {rel}")
-        else:
-            add(findings, "ok", f"Generated output is Git-visible: {rel}")
+        except GitCommandError as exc:
+            if exc.status == 1:
+                add(findings, "ok", f"Generated output is Git-visible: {rel}")
+            else:
+                add(findings, "warn", f"Could not check Git visibility for {rel}: {exc}")
 
 
 def check_no_nested_git(findings: list[Finding], root: Path) -> None:
@@ -238,20 +233,10 @@ def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = Fal
 
     check_exists(findings, root, ROOT_FILES, kind="root file")
     check_exists(findings, root, REQUIRED_OPEN_CODE_DIRS, kind="OpenCode directory")
-    check_exists(
-        findings,
-        root / ".opencode/commands",
-        REQUIRED_COMMANDS,
-        kind="OpenCode command",
-    )
+    check_exists(findings, root / ".opencode/commands", REQUIRED_COMMANDS, kind="OpenCode command")
     check_exists(findings, root / ".opencode/skills", REQUIRED_SKILLS, kind="OpenCode skill")
     check_exists(findings, root / ".opencode/docs", REQUIRED_DOCS, kind="llmzk doc")
-    check_exists(
-        findings,
-        root / ".opencode/llmzk-tools/scripts",
-        REQUIRED_TOOLS,
-        kind="llmzk tool script",
-    )
+    check_exists(findings, root / ".opencode/llmzk-tools/scripts", REQUIRED_TOOLS, kind="llmzk tool script")
     check_exists(findings, root / "Templates", REQUIRED_TEMPLATES, kind="template")
     check_gitkeep(findings, root)
     check_opencode_config(findings, root)
@@ -274,19 +259,30 @@ def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = Fal
     return exit_code, findings
 
 
-def cmd_doctor(args: argparse.Namespace) -> int:
-    exit_code, findings = run_doctor(
-        Path(args.vault), fail_if_dirty=args.fail_if_dirty, quiet_ok=args.quiet_ok
-    )
-    if args.json:
-        print(json.dumps([f.__dict__ for f in findings], indent=2))
+def doctor(
+    vault: Path,
+    fail_if_dirty: bool = False,
+    quiet_ok: bool = False,
+    json: bool = False,
+) -> int:
+    """Check an installed llmzk vault.
+
+    Args:
+        vault: Path to the installed vault.
+        fail_if_dirty: Fail if the vault Git working tree has uncommitted changes.
+        quiet_ok: Only print a compact success line on pass.
+        json: Print findings as JSON.
+    """
+    exit_code, findings = run_doctor(vault, fail_if_dirty=fail_if_dirty, quiet_ok=quiet_ok)
+    if json:
+        print(json_lib.dumps([f.__dict__ for f in findings], indent=2))
         return exit_code
 
-    print(f"llmzk doctor: {Path(args.vault).expanduser().resolve()}")
+    print(f"llmzk doctor: {vault.expanduser().resolve()}")
     print()
     for finding in findings:
         label = {"ok": "OK", "warn": "WARN", "fail": "FAIL"}[finding.level]
-        if args.quiet_ok and finding.level == "ok" and finding.message != "Doctor passed":
+        if quiet_ok and finding.level == "ok" and finding.message != "Doctor passed":
             continue
         print(f"[{label}] {finding.message}")
 
@@ -298,23 +294,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return exit_code
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Check an installed llmzk vault")
-    parser.add_argument("vault", nargs="?", default=".", help="Path to the installed vault")
-    parser.add_argument(
-        "--fail-if-dirty",
-        action="store_true",
-        help="Fail if the vault Git working tree has uncommitted changes",
-    )
-    parser.add_argument("--quiet-ok", action="store_true", help="Only print a compact success line on pass")
-    parser.add_argument("--json", action="store_true", help="Print findings as JSON")
-    return parser
-
-
 def main() -> int:
-    parser = build_parser()
-    args = parser.parse_args()
-    return cmd_doctor(args)
+    return tyro.cli(doctor)
 
 
 if __name__ == "__main__":

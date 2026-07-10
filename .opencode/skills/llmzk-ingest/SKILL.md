@@ -34,19 +34,16 @@ Create when warranted:
 5. Use the installed `obsidian-markdown` skill for Obsidian syntax details.
 6. Use wikilinks with link context.
 7. Use MathJax for math.
-8. Apply `references/high_judgement_notes_protocol.md` before creating bridge or contradiction/tension notes.
-9. Do not force bridge notes or contradiction/tension notes. It is valid to record `No bridge note warranted` or `No durable contradiction/tension note warranted` in the decision log.
-10. For source notes in `01 Sources/`, use `status: ingested`, not `status: raw`; raw material lives in `00 Inbox/`.
-11. When generalising backpropagation equations beyond sigmoid activations, say “differentiable elementwise activation functions” rather than “any activation function.”
-12. Write passport and decision log.
-13. Run or recommend a light audit.
+8. For source notes in `01 Sources/`, use `status: ingested`, not `status: raw`; raw material lives in `00 Inbox/`.
+9. When generalising backpropagation equations beyond sigmoid activations, say “differentiable elementwise activation functions” rather than “any activation function.”
+10. Write passport and decision log.
+11. Run or recommend a light audit.
 
 ## Read these llmzk references
 
 - `references/source_ingest_protocol.md`
 - `references/candidate_inventory_protocol.md`
 - `references/note_writing_protocol.md`
-- `references/high_judgement_notes_protocol.md`
 - `references/link_policy.md`
 - `references/frontmatter_protocol.md`
 - `references/math_formatting_protocol.md`

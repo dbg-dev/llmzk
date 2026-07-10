@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.2
+
+- Rewrote the upstream installer CLI and installed vault tool CLIs to use `tyro` instead of `argparse`.
+- Rewrote Git-facing code to use `GitPython` instead of direct `subprocess` calls.
+- Updated root and installed-tool Python dependencies to include `tyro` and `gitpython`.
+- Preserved existing command syntax for installed OpenCode commands, including Git preflight/diff/status and dry-run revert behaviour.
+- Carried forward the 0.5.1 source-note status and backpropagation wording patch: source notes use `status: ingested`; backprop generalisation uses “differentiable elementwise activation functions.”
+
 ## 0.5.1
 
 - Added `llmzk-doctor` for installed-vault health checks.

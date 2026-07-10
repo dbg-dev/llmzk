@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import argparse
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
+from typing import Literal
+
+from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
+import tyro
 
 from llmzk.doctor import run_doctor
 
@@ -31,14 +33,23 @@ LOG_FOLDERS = [
 
 ROOT_FILES = ["AGENTS.md", "opencode.json", ".gitignore"]
 SYSTEM_DIRS = [".opencode", "Templates"]
+INITIAL_COMMIT_PATHS = [
+    "AGENTS.md",
+    "opencode.json",
+    ".gitignore",
+    ".opencode",
+    "Templates",
+    *VAULT_FOLDERS,
+    "Logs",
+]
 
 
 def default_repo_root() -> Path:
-    # Source-tree usage: <repo>/src/llmzk/init.py
+    """Return the source checkout root for editable/source-tree usage."""
     return Path(__file__).resolve().parents[2]
 
 
-def copy_or_symlink_dir(src: Path, dst: Path, *, mode: str, force: bool) -> None:
+def copy_or_symlink_dir(src: Path, dst: Path, *, mode: Literal["copy", "symlink"], force: bool) -> None:
     if dst.exists() or dst.is_symlink():
         if not force:
             raise SystemExit(f"Refusing to overwrite existing path: {dst}")
@@ -48,11 +59,9 @@ def copy_or_symlink_dir(src: Path, dst: Path, *, mode: str, force: bool) -> None
             shutil.rmtree(dst)
     if mode == "copy":
         shutil.copytree(src, dst)
-    elif mode == "symlink":
+    else:
         rel = os.path.relpath(src, start=dst.parent)
         dst.symlink_to(rel, target_is_directory=True)
-    else:  # pragma: no cover
-        raise ValueError(mode)
 
 
 def copy_file(src: Path, dst: Path, *, force: bool) -> None:
@@ -71,67 +80,67 @@ def ensure_gitkeep(path: Path) -> None:
         gitkeep.write_text("", encoding="utf-8")
 
 
-def run(cmd: list[str], cwd: Path, *, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        cmd,
-        cwd=cwd,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=check,
-    )
+def repo_at(path: Path) -> Repo | None:
+    try:
+        return Repo(path, search_parent_directories=False)
+    except (InvalidGitRepositoryError, NoSuchPathError):
+        return None
 
 
-def is_git_repo(path: Path) -> bool:
-    result = run(["git", "rev-parse", "--is-inside-work-tree"], path, check=False)
-    return result.returncode == 0 and result.stdout.strip() == "true"
-
-
-def init_git(vault: Path) -> None:
-    if is_git_repo(vault):
+def init_git_repo(vault: Path) -> Repo:
+    repo = repo_at(vault)
+    if repo is not None:
         print("Git: existing repository detected")
-        return
-    result = run(["git", "init"], vault, check=False)
-    if result.returncode != 0:
-        raise SystemExit(f"git init failed:\n{result.stderr}")
+        return repo
+    repo = Repo.init(vault)
     print("Git: initialized repository")
+    return repo
 
 
 def initial_commit(vault: Path) -> None:
-    run(
-        [
-            "git",
-            "add",
-            "AGENTS.md",
-            "opencode.json",
-            ".gitignore",
-            ".opencode",
-            "Templates",
-            *VAULT_FOLDERS,
-            "Logs",
-        ],
-        vault,
-        check=False,
-    )
-    result = run(["git", "commit", "-m", "llmzk: initialize vault scaffold"], vault, check=False)
-    if result.returncode != 0:
+    repo = repo_at(vault) or init_git_repo(vault)
+    try:
+        repo.git.add(*INITIAL_COMMIT_PATHS)
+        if not repo.is_dirty(untracked_files=True):
+            print("Git: no scaffold changes to commit")
+            return
+        repo.index.commit("llmzk: initialize vault scaffold")
+        print("Git: created initial commit")
+    except GitCommandError as exc:
         print(
             "Git: initial commit failed. This is often because user.name/user.email is not configured.",
             file=sys.stderr,
         )
-        print(result.stderr, file=sys.stderr)
-    else:
-        print("Git: created initial commit")
+        print(str(exc), file=sys.stderr)
 
 
-def cmd_init(args: argparse.Namespace) -> int:
-    repo_root = Path(args.source).resolve() if args.source else default_repo_root()
+def init(
+    vault: Path,
+    mode: Literal["copy", "symlink"] = "copy",
+    source: Path | None = None,
+    force: bool = False,
+    git: bool = True,
+    commit: bool = False,
+    doctor: bool = True,
+) -> int:
+    """Initialize an llmzk OpenCode/Obsidian vault.
+
+    Args:
+        vault: Path to the vault folder to create or install into.
+        mode: Install `.opencode` and `Templates` by copying or symlinking.
+        source: Path to the llmzk source repo. Defaults to this source checkout.
+        force: Allow installing into an existing folder and overwrite installed system paths.
+        git: Initialize a Git repository in the vault.
+        commit: Create an initial scaffold commit.
+        doctor: Run `llmzk doctor` after installing the scaffold.
+    """
+    repo_root = source.expanduser().resolve() if source else default_repo_root()
     scaffold = repo_root / "scaffold"
     if not scaffold.exists():
         raise SystemExit(f"Could not find scaffold directory: {scaffold}")
 
-    vault = Path(args.vault).expanduser().resolve()
-    if vault.exists() and any(vault.iterdir()) and not args.force:
+    vault = vault.expanduser().resolve()
+    if vault.exists() and any(vault.iterdir()) and not force:
         raise SystemExit(
             f"Vault path is not empty: {vault}\nUse --force to install into an existing folder."
         )
@@ -139,27 +148,27 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     print(f"llmzk source: {repo_root}")
     print(f"Vault: {vault}")
-    print(f"Install mode: {args.mode}")
+    print(f"Install mode: {mode}")
 
     # Root files are copied, not symlinked, because they are project-local entry points.
     for name in ROOT_FILES:
-        copy_file(scaffold / name, vault / name, force=args.force)
+        copy_file(scaffold / name, vault / name, force=force)
 
     # System directories can be copied or symlinked.
     for name in SYSTEM_DIRS:
-        copy_or_symlink_dir(scaffold / name, vault / name, mode=args.mode, force=args.force)
+        copy_or_symlink_dir(scaffold / name, vault / name, mode=mode, force=force)
 
     for name in VAULT_FOLDERS:
         ensure_gitkeep(vault / name)
     for name in LOG_FOLDERS:
         ensure_gitkeep(vault / name)
 
-    if args.git:
-        init_git(vault)
-        if args.commit:
+    if git:
+        init_git_repo(vault)
+        if commit:
             initial_commit(vault)
 
-    if args.doctor:
+    if doctor:
         print("\nRunning llmzk doctor...")
         code, findings = run_doctor(vault, fail_if_dirty=False, quiet_ok=True)
         for finding in findings:
@@ -170,8 +179,8 @@ def cmd_init(args: argparse.Namespace) -> int:
     print("\nCreated llmzk vault scaffold.")
     print("Next:")
     print(f"  cd {vault}")
-    if args.git and not args.commit:
-        print("  git add . && git commit -m \"llmzk: initialize vault scaffold\"")
+    if git and not commit:
+        print('  git add . && git commit -m "llmzk: initialize vault scaffold"')
     print("  opencode")
     print("  /llmzk-doctor")
     print("  /llmzk-git-status")
@@ -179,41 +188,8 @@ def cmd_init(args: argparse.Namespace) -> int:
     return 0
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Initialize an llmzk OpenCode/Obsidian vault")
-    parser.add_argument("vault", help="Path to the vault folder to create or install into")
-    parser.add_argument(
-        "--mode",
-        choices=["copy", "symlink"],
-        default="copy",
-        help="Install .opencode and Templates by copying or symlinking",
-    )
-    parser.add_argument("--source", help="Path to the llmzk source repo; defaults to this source checkout")
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Allow installing into an existing folder and overwrite installed system paths",
-    )
-    parser.add_argument(
-        "--git",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Initialize a Git repository in the vault",
-    )
-    parser.add_argument("--commit", action="store_true", help="Create an initial scaffold commit")
-    parser.add_argument(
-        "--doctor",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Run llmzk doctor after installing the scaffold",
-    )
-    return parser
-
-
 def main() -> int:
-    parser = build_parser()
-    args = parser.parse_args()
-    return cmd_init(args)
+    return tyro.cli(init)
 
 
 if __name__ == "__main__":

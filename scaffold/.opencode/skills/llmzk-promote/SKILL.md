@@ -26,11 +26,13 @@ Create or update only what is warranted:
 2. Inspect the fleeting note or cluster.
 3. Produce a candidate inventory before writing final notes.
 4. Classify each candidate as concept, permanent claim, bridge, contradiction/tension, index entry, defer, merge, or archive.
-5. Do not promote all fleeting notes into concepts.
-6. Do not collapse a technical cluster into one mega-note.
-7. Use `origin_trail` for notes whose provenance is your own fleeting material rather than an external source.
-8. Write passport and decision log.
-9. Run or recommend frontmatter fix + light audit.
+5. Apply `../llmzk-ingest/references/high_judgement_notes_protocol.md` before creating bridge or contradiction/tension notes.
+6. Do not force bridge notes or contradiction/tension notes. It is valid to record `No bridge note warranted` or `No durable contradiction/tension note warranted` in the decision log.
+7. Do not promote all fleeting notes into concepts.
+8. Do not collapse a technical cluster into one mega-note.
+9. Use `origin_trail` for notes whose provenance is your own fleeting material rather than an external source.
+10. Write passport and decision log.
+11. Run or recommend frontmatter fix + light audit.
 
 ## Read these references
 
@@ -38,4 +40,5 @@ Create or update only what is warranted:
 - `references/promotion_cluster_protocol.md`
 - `../llmzk-ingest/references/candidate_inventory_protocol.md`
 - `../llmzk-ingest/references/note_writing_protocol.md`
+- `../llmzk-ingest/references/high_judgement_notes_protocol.md`
 - `../llmzk-ingest/references/frontmatter_protocol.md`

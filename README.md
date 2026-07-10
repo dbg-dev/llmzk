@@ -88,11 +88,22 @@ llmzk skills          = Zettelkasten judgement
 Git                   = vault safety and rollback boundary
 ```
 
+## Python CLI implementation
+
+The Python CLIs use:
+
+```text
+tyro      = typed command-line interfaces
+GitPython = Git status, init, diff, ignore, checkout, and commit helpers
+```
+
+The installed vault tools under `.opencode/llmzk-tools/scripts/` follow the same convention.
+
 ## Repository layout
 
 ```text
 scaffold/             files installed into a vault
-src/llmzk/init.py     init command
-src/llmzk/doctor.py   installed-vault doctor command
+src/llmzk/init.py     tyro-based init command
+src/llmzk/doctor.py   tyro + GitPython installed-vault doctor command
 pyproject.toml        upstream installer project
 ```

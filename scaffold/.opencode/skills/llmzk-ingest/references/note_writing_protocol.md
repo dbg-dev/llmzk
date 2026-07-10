@@ -30,13 +30,20 @@ Use this protocol for Zettelkasten substance.
 ## Bridge notes
 
 - Explain a meaningful connection between ideas.
-- Do not merely list related notes.
-- State why the bridge matters.
+- Prefer transformations, translations, equivalences, representation shifts, or conceptual transfers.
+- Do not create a bridge just because two concepts are related or one concept appears in another note.
+- Use claim-like titles that explain the relation.
+- State why the bridge matters for future thinking.
+- If the connection is ordinary or obvious, put it in an index note or link context instead.
+- See `high_judgement_notes_protocol.md` before creating bridge notes.
 
 ## Contradiction/tension notes
 
-- Preserve tensions, trade-offs, disagreements, or incompatible claims.
-- Not every source requires one.
+- Preserve real tensions, trade-offs, disagreements, limitations, ambiguities, or apparent conflicts.
+- Do not create a contradiction note merely because a source is subtle, notation is hard, or a caveat exists.
+- A good contradiction note names both sides of the tension and says whether it is resolved, unresolved, contextual, or a trade-off.
+- Not every source requires one. Prefer no contradiction note over a weak contradiction note.
+- See `high_judgement_notes_protocol.md` before creating contradiction/tension notes.
 
 ## Index notes
 
