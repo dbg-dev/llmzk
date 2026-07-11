@@ -35,7 +35,8 @@ REQUIRED_OPEN_CODE_DIRS = [
     ".opencode/skills",
     ".opencode/docs",
     ".opencode/llmzk-tools",
-    ".opencode/llmzk-tools/scripts",
+    ".opencode/llmzk-tools/src/llmzk_tools",
+    ".opencode/bin",
 ]
 REQUIRED_COMMANDS = [
     "llmzk-audit.md",
@@ -69,13 +70,13 @@ REQUIRED_DOCS = [
     "OBSIDIAN_SKILLS.md",
 ]
 REQUIRED_TOOLS = [
-    "llmzk_audit.py",
-    "llmzk_doctor.py",
-    "llmzk_fix_frontmatter.py",
-    "llmzk_git_safety.py",
-    "llmzk_new_run.py",
-    "llmzk_normalize_links.py",
-    "llmzk_smoke_test.py",
+    "audit.py",
+    "doctor.py",
+    "fix_frontmatter.py",
+    "git_safety.py",
+    "new_run.py",
+    "normalize_links.py",
+    "smoke_test.py",
 ]
 REQUIRED_TEMPLATES = [
     "source-note.md",
@@ -224,6 +225,38 @@ def check_gitkeep(findings: list[Finding], root: Path) -> None:
             add(findings, "warn", f"Missing folder placeholder: {rel}/.gitkeep")
 
 
+def check_tool_project(findings: list[Finding], root: Path) -> None:
+    pyproject = root / ".opencode" / "llmzk-tools" / "pyproject.toml"
+    wrapper = root / ".opencode" / "bin" / "llmzk"
+    if wrapper.exists() or wrapper.is_symlink():
+        add(findings, "ok", "llmzk wrapper exists: .opencode/bin/llmzk")
+    else:
+        add(findings, "fail", "Missing llmzk wrapper: .opencode/bin/llmzk")
+    if not pyproject.exists():
+        add(findings, "fail", "Missing llmzk-tools pyproject.toml")
+        return
+    text = pyproject.read_text(encoding="utf-8")
+    required = [
+        "llmzk-audit",
+        "llmzk-doctor",
+        "llmzk-fix-frontmatter",
+        "llmzk-git-safety",
+        "llmzk-new-run",
+        "llmzk-normalize-links",
+        "llmzk-smoke-test",
+    ]
+    for name in required:
+        if name in text:
+            add(findings, "ok", f"llmzk-tools script registered: {name}")
+        else:
+            add(findings, "fail", f"llmzk-tools script missing from pyproject.toml: {name}")
+    for dep in ["tyro", "gitpython", "pyyaml"]:
+        if dep in text.lower():
+            add(findings, "ok", f"llmzk-tools dependency declared: {dep}")
+        else:
+            add(findings, "fail", f"llmzk-tools dependency missing: {dep}")
+
+
 def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = False) -> tuple[int, list[Finding]]:
     root = vault.expanduser().resolve()
     findings: list[Finding] = []
@@ -236,7 +269,8 @@ def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = Fal
     check_exists(findings, root / ".opencode/commands", REQUIRED_COMMANDS, kind="OpenCode command")
     check_exists(findings, root / ".opencode/skills", REQUIRED_SKILLS, kind="OpenCode skill")
     check_exists(findings, root / ".opencode/docs", REQUIRED_DOCS, kind="llmzk doc")
-    check_exists(findings, root / ".opencode/llmzk-tools/scripts", REQUIRED_TOOLS, kind="llmzk tool script")
+    check_exists(findings, root / ".opencode/llmzk-tools/src/llmzk_tools", REQUIRED_TOOLS, kind="llmzk tool module")
+    check_tool_project(findings, root)
     check_exists(findings, root / "Templates", REQUIRED_TEMPLATES, kind="template")
     check_gitkeep(findings, root)
     check_opencode_config(findings, root)
@@ -261,6 +295,7 @@ def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = Fal
 
 def doctor(
     vault: Path,
+    /,  # Mark the end of positional arguments.
     fail_if_dirty: bool = False,
     quiet_ok: bool = False,
     json: bool = False,

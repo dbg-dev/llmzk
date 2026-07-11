@@ -9,7 +9,7 @@ This skill does not replace the installed Obsidian skills. Use `obsidian-markdow
 1. Run or inspect:
 
 ```bash
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_audit.py .
+.opencode/bin/llmzk audit .
 ```
 
 2. Review files in `Logs/Review Queue/`.
@@ -29,6 +29,6 @@ uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmz
 ## Related commands
 
 ```bash
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_normalize_links.py . --dry-run
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_fix_frontmatter.py . --apply
+.opencode/bin/llmzk normalize-links . --dry-run
+.opencode/bin/llmzk fix-frontmatter . --apply
 ```

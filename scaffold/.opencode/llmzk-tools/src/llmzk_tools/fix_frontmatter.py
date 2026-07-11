@@ -10,7 +10,7 @@ It does not rewrite the body of the note.
 """
 from __future__ import annotations
 
-import argparse
+import tyro
 import re
 from pathlib import Path
 from typing import Any
@@ -196,13 +196,8 @@ def iter_markdown(root: Path):
         yield path
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("root", nargs="?", default=".")
-    parser.add_argument("--apply", action="store_true")
-    args = parser.parse_args()
-
-    root = Path(args.root)
+def run(root: Path, apply: bool = False) -> int:
+    """Normalize llmzk frontmatter link-list formatting."""
     changed = 0
     errors = 0
     for path in iter_markdown(root):
@@ -214,12 +209,12 @@ def main() -> int:
             continue
         if did_change:
             changed += 1
-            print(f"{path}: frontmatter would be normalized" if not args.apply else f"{path}: normalized")
-            if args.apply:
+            print(f"{path}: frontmatter would be normalized" if not apply else f"{path}: normalized")
+            if apply:
                 path.write_text(new_text, encoding="utf-8")
     if changed == 0 and errors == 0:
         print("No frontmatter normalization changes found.")
-    elif not args.apply:
+    elif not apply:
         print(f"Found {changed} frontmatter file(s) to normalize. Re-run with --apply to modify files.")
     else:
         print(f"Normalized {changed} frontmatter file(s).")
@@ -227,6 +222,10 @@ def main() -> int:
         print(f"Encountered {errors} frontmatter parse error(s).")
         return 1
     return 0
+
+
+def main() -> int:
+    return tyro.cli(run)
 
 
 if __name__ == "__main__":

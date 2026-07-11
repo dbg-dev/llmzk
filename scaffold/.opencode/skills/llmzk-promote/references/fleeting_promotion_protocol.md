@@ -12,9 +12,13 @@ A fleeting note may become:
 
 Do not promote all fleeting notes. Do not convert all fleeting notes into concepts.
 
+For bridge and contradiction/tension candidates, apply `../llmzk-ingest/references/high_judgement_notes_protocol.md`. These note types require judgement and should not be created merely to satisfy a workflow shape.
+
 ## Classification examples
 
 - `Hadamard product means elementwise multiplication` → concept note.
-- `Backpropagation is reverse-mode AD specialised to neural networks` → permanent note or bridge note.
-- `Why is delta defined with respect to z?` → question or permanent note after answer.
-- `Compare Nielsen with reverse-mode AD` → bridge candidate.
+- `Backpropagation is reverse-mode AD specialised to neural networks` → permanent note or strong bridge note if it explains the translation between neural-network notation and reverse-mode AD.
+- `Why is delta defined with respect to z?` → permanent note after answer, or strong bridge note if it explains why weighted input is the right intermediate variable.
+- `Compare Nielsen with reverse-mode AD` → bridge candidate only if the note captures a specific transformation, such as error propagation as a VJP/pullback.
+- `This notation is ugly` → usually a decision-log observation, not a contradiction note.
+- `Finite differences are intuitive but scale poorly with parameter count` → contradiction/tension note if the trade-off is central.

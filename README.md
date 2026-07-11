@@ -2,21 +2,21 @@
 
 `llmzk` is a lightweight OpenCode + Obsidian harness for building a Zettelkasten with LLM assistance.
 
-This repository is now an **installer/source repo**, not the vault itself.
+This repository is an **installer/source repo**, not the vault itself.
 
 ```text
-llmzk repo        = upstream system, scaffold, init command
+llmzk repo        = upstream scaffold, skills, commands, templates, install script
 installed vault   = your Obsidian vault and Git safety boundary
 ```
 
 ## What it installs
 
-The init command creates a vault with:
+The install script creates a vault with:
 
 ```text
 AGENTS.md
 opencode.json
-.opencode/                 OpenCode commands, agents, skills, docs, and tools
+.opencode/                 OpenCode commands, agents, skills, docs, wrapper, tools
 Templates/                 reusable note templates
 00 Inbox/                  raw source inputs
 00 Fleeting Notes/         rough personal notes
@@ -39,20 +39,20 @@ The numbered folders and `Logs/` are real vault-owned folders. They are created 
 From a clone of this repository:
 
 ```bash
-uv run llmzk-init ~/Vaults/MyResearchVault --mode copy --git --commit
+./scripts/init-vault.sh ~/Vaults/MyResearchVault --mode copy --git --commit
 ```
 
 For development, you can symlink the system layer instead:
 
 ```bash
-uv run llmzk-init ~/Vaults/MyResearchVault --mode symlink --git --commit
+./scripts/init-vault.sh ~/Vaults/MyResearchVault --mode symlink --git --commit
 ```
 
 Use `copy` for portability. Use `symlink` when actively developing `llmzk` and wanting the vault to use the local upstream files.
 
 ## Git safety
 
-The installed vault is initialized as its own Git repository unless you pass `--no-git`. `llmzk-init` also runs a doctor check by default; disable it with `--no-doctor` if needed.
+The installed vault is initialized as its own Git repository unless you pass `--no-git`.
 
 The intended workflow is:
 
@@ -79,31 +79,44 @@ Agents may inspect Git status and diffs, but must not stage, commit, reset, clea
 /llmzk-synthesize <topic>
 ```
 
+## Installed-vault tool wrapper
+
+The installed vault includes a small wrapper:
+
+```bash
+.opencode/bin/llmzk audit .
+.opencode/bin/llmzk doctor .
+.opencode/bin/llmzk git preflight .
+.opencode/bin/llmzk git diff . --stat
+```
+
+The wrapper hides the `uv run --project .opencode/llmzk-tools ...` implementation detail from OpenCode command files.
+
 ## Design boundary
 
 ```text
 obsidian-skills       = Obsidian mechanics
 llmzk skills          = Zettelkasten judgement
-.opencode/llmzk-tools = deterministic audit, cleanup, Git safety helpers
+.opencode/llmzk-tools = deterministic audit, cleanup, doctor, Git safety helpers
 Git                   = vault safety and rollback boundary
 ```
 
 ## Python CLI implementation
 
-The Python CLIs use:
+There is no root Python package in this source repo. Runtime Python tools live only in the scaffold at:
 
 ```text
-tyro      = typed command-line interfaces
-GitPython = Git status, init, diff, ignore, checkout, and commit helpers
+scaffold/.opencode/llmzk-tools/
 ```
 
-The installed vault tools under `.opencode/llmzk-tools/scripts/` follow the same convention.
+That package exposes console scripts with `[project.scripts]`, uses `tyro` for CLIs, and uses `GitPython` for Git-facing operations.
 
 ## Repository layout
 
 ```text
-scaffold/             files installed into a vault
-src/llmzk/init.py     tyro-based init command
-src/llmzk/doctor.py   tyro + GitPython installed-vault doctor command
-pyproject.toml        upstream installer project
+scripts/init-vault.sh             Bash installer for creating a concrete vault
+scaffold/                         files installed into a vault
+scaffold/.opencode/llmzk-tools/   installed-vault Python tools package
+scaffold/.opencode/bin/llmzk      installed-vault wrapper
+scaffold/Templates/               reusable note templates
 ```

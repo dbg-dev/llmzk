@@ -28,7 +28,7 @@ Recommended procedure:
 Before broad write commands such as `/llmzk-ingest`, `/llmzk-promote`, and `/llmzk-synthesize`, run:
 
 ```bash
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py preflight .
+.opencode/bin/llmzk git preflight . .
 ```
 
 If preflight fails, do not continue unless the user explicitly says to continue with mixed changes.
@@ -40,7 +40,7 @@ Use `/llmzk-doctor` after installation, after updating the harness, and when com
 The strict doctor mode is:
 
 ```bash
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_doctor.py . --fail-if-dirty
+.opencode/bin/llmzk doctor . --fail-if-dirty
 ```
 
 This checks the installed scaffold, OpenCode paths, templates, Git repo, folder placeholders, and config references.

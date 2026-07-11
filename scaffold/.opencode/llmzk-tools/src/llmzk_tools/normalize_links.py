@@ -5,7 +5,7 @@ This script is intentionally mechanical. It does not create notes.
 """
 from __future__ import annotations
 
-import argparse
+import tyro
 import re
 from pathlib import Path
 
@@ -87,14 +87,10 @@ def iter_markdown(root: Path):
         yield path
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("root", nargs="?", default=".")
-    parser.add_argument("--apply", action="store_true")
-    parser.add_argument("--dry-run", action="store_true")
-    args = parser.parse_args()
-
-    root = Path(args.root)
+def run(root: Path, apply: bool = False, dry_run: bool = False) -> int:
+    """Normalize escaped-pipe wikilinks outside fenced code blocks."""
+    # `dry_run` is retained for command compatibility; dry-run is the default unless `apply` is set.
+    _ = dry_run
     total = 0
     for path in iter_markdown(root):
         text = path.read_text(encoding="utf-8")
@@ -104,15 +100,19 @@ def main() -> int:
             print(f"{path}:")
             for old, new in changes:
                 print(f"  [[{old}]] -> [[{new}]]")
-            if args.apply:
+            if apply:
                 path.write_text(new_text, encoding="utf-8")
     if total == 0:
         print("No link normalization changes found.")
-    elif not args.apply:
+    elif not apply:
         print(f"Found {total} link normalization change(s). Re-run with --apply to modify files.")
     else:
         print(f"Applied {total} link normalization change(s).")
     return 0
+
+
+def main() -> int:
+    return tyro.cli(run)
 
 
 if __name__ == "__main__":

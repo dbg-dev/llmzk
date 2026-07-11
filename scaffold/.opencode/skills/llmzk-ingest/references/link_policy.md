@@ -50,8 +50,8 @@ connects:
 Use the normalizer for obvious formatting issues:
 
 ```bash
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_normalize_links.py . --dry-run
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_normalize_links.py . --apply
+.opencode/bin/llmzk normalize-links . --dry-run
+.opencode/bin/llmzk normalize-links . --apply
 ```
 
 ## Do not create stubs blindly

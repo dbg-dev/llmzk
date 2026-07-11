@@ -1,38 +1,27 @@
 # llmzk OpenCode harness
 
-This directory contains the installed `llmzk` system layer for an Obsidian vault.
+This folder is installed into a concrete Obsidian vault by `scripts/init-vault.sh` from the upstream source repo.
 
-## What OpenCode discovers here
-
-```text
-.opencode/commands/   slash commands such as /llmzk-ingest
-.opencode/skills/     llmzk skills loaded on demand
-.opencode/agents/     specialist review/synthesis agents
-.opencode/plugins/    optional plugins, if added later
-```
-
-Other files in `.opencode/` are ordinary support files. They are referenced by
-`AGENTS.md`, `opencode.json`, commands, or skills.
-
-## Boundary
+## Contents
 
 ```text
-.opencode/        = system layer: commands, skills, agents, docs, tools
-Templates/        = reusable note forms
-00-09 folders     = vault-owned user/generated note content
-Logs/             = generated passports, decision logs, review queues
+commands/       OpenCode slash commands
+agents/         Optional specialist agents
+skills/         llmzk domain skills
+docs/           llmzk operating docs
+bin/llmzk       Wrapper for deterministic tools
+llmzk-tools/    Python package for audit, doctor, cleanup, and Git safety
 ```
 
-## Tools
+## Tool wrapper
 
-Run from the vault root:
+Use the wrapper from the vault root:
 
 ```bash
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_doctor.py .
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_audit.py .
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py status
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py diff . --stat
+.opencode/bin/llmzk audit .
+.opencode/bin/llmzk doctor .
+.opencode/bin/llmzk git preflight .
+.opencode/bin/llmzk git diff . --stat
 ```
 
-Agents may inspect Git state freely, but must not stage, commit, reset, clean, or
-revert without explicit user approval.
+The wrapper invokes console scripts from `.opencode/llmzk-tools`, whose CLIs use `tyro`. Git-facing commands use `GitPython`.

@@ -1,15 +1,26 @@
 [project]
 name = "llmzk-tools"
-version = "0.6.1"
-description = "Small Python utilities for the llmzk OpenCode/Obsidian harness"
+version = "0.5.2.post1"
+description = "Deterministic utilities for an installed llmzk OpenCode/Obsidian vault"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "gitpython>=3.1.43",
     "pyyaml>=6.0.2",
+    "tyro>=0.9.0",
 ]
 
+[project.scripts]
+llmzk-audit = "llmzk_tools.audit:main"
+llmzk-doctor = "llmzk_tools.doctor:main"
+llmzk-fix-frontmatter = "llmzk_tools.fix_frontmatter:main"
+llmzk-git-safety = "llmzk_tools.git_safety:main"
+llmzk-new-run = "llmzk_tools.new_run:main"
+llmzk-normalize-links = "llmzk_tools.normalize_links:main"
+llmzk-smoke-test = "llmzk_tools.smoke_test:main"
+
 [tool.uv]
-package = false
+package = true
 
 [tool.ruff]
 line-length = 100

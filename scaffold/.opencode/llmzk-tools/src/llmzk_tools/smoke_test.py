@@ -4,9 +4,9 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from llmzk_normalize_links import normalize_text
-from llmzk_audit import audit
-from llmzk_fix_frontmatter import fix_text
+from llmzk_tools.normalize_links import normalize_text
+from llmzk_tools.audit import audit
+from llmzk_tools.fix_frontmatter import fix_text
 
 
 def test_normalize_links():

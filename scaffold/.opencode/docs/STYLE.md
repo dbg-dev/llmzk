@@ -10,7 +10,6 @@ Use this file for llmzk writing taste. Use the installed `obsidian-markdown` ski
 - Keep notes scannable in Obsidian.
 - Use callouts sparingly for important, warning, example, or question blocks.
 - Do not use callouts as the default container for equations.
-- Use tab for indents of nested lists
 
 ## Math
 
@@ -32,4 +31,4 @@ Use this file for llmzk writing taste. Use the installed `obsidian-markdown` ski
 - In frontmatter, write wikilinks as quoted strings: `"[[Backpropagation]]"`.
 - Use `source_trail` for external sources and `origin_trail` for fleeting/internal note origins.
 - Never write nested list frontmatter such as `- - - Source - Example`.
-- Run `uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_fix_frontmatter.py . --apply` if frontmatter becomes malformed.
+- Run `.opencode/bin/llmzk fix-frontmatter . --apply` if frontmatter becomes malformed.

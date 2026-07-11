@@ -1,33 +1,31 @@
 # Changelog
 
-## 0.5.2
+## v5.2.1 — Bash init + scaffold-owned tools cleanup
 
-- Rewrote the upstream installer CLI and installed vault tool CLIs to use `tyro` instead of `argparse`.
-- Rewrote Git-facing code to use `GitPython` instead of direct `subprocess` calls.
-- Updated root and installed-tool Python dependencies to include `tyro` and `gitpython`.
-- Preserved existing command syntax for installed OpenCode commands, including Git preflight/diff/status and dry-run revert behaviour.
-- Carried forward the 0.5.1 source-note status and backpropagation wording patch: source notes use `status: ingested`; backprop generalisation uses “differentiable elementwise activation functions.”
+- Replaced the root Python `llmzk-init` package with `scripts/init-vault.sh`.
+- Removed root `src/llmzk`, root `pyproject.toml`, root `.python-version`, and root `uv.lock` from the source-repo design.
+- Kept the source repo as scaffold + install script, not a partially installed vault.
+- Added root `AGENTS.md` explaining source-repo vs installed-vault boundaries.
+- Moved all installed-vault deterministic tools into `scaffold/.opencode/llmzk-tools/src/llmzk_tools/`.
+- Converted `scaffold/.opencode/llmzk-tools` into a real Python package with `[project.scripts]` entries.
+- Added `.opencode/bin/llmzk` wrapper so command files do not need raw `uv run --project ...` commands.
+- Updated OpenCode command files to call the wrapper.
+- Kept `tyro` as the CLI layer for scaffold tools.
+- Kept `GitPython` as the Git layer for scaffold tools.
+- Kept the high-judgement bridge/contradiction skill improvements from v5.2.
 
-## 0.5.1
+## v5.2 — Tyro + GitPython migration
 
-- Added `llmzk-doctor` for installed-vault health checks.
-- Added installed command `/llmzk-doctor`.
-- `llmzk-init` now runs doctor by default after scaffold installation.
-- Install docs now recommend `--commit` so the initial scaffold starts from a clean Git preflight state.
-- Main broad-write commands now require Git preflight before writing.
-- `/llmzk-ingest`, `/llmzk-promote`, and `/llmzk-synthesize` now spell out the post-write cleanup/audit/diff sequence.
-- Updated Git policy to make the dirty-tree stop rule explicit.
-- Changed installed-vault `.gitignore` so generated durable notes and Logs are Git-visible by default.
-- Doctor now checks that generated durable outputs are not ignored by Git.
-- Added installed `llmzk_doctor.py` under `.opencode/llmzk-tools/scripts/`.
+- Migrated upstream Python CLIs toward `tyro` and `GitPython`.
+- Added source status and activation-function wording fixes.
 
-## 0.5.0
+## v5.1 — Git safety hardening
 
-- Converted release into an upstream installer/source repository.
-- Added `llmzk-init` to create a separate vault repository.
-- Moved installed operating docs under `.opencode/docs/`.
-- Keeps `AGENTS.md` at installed vault root as the OpenCode project instruction entry point.
-- Adds `opencode.json` with explicit instruction paths.
-- Supports copy and symlink install modes for `.opencode/` and `Templates/`.
-- Includes Git safety commands and `llmzk_git_safety.py`.
-- Creates real numbered output folders and `Logs/` with `.gitkeep`; generated contents are ignored by default.
+- Added `llmzk-doctor`.
+- Added Git safety command set.
+- Strengthened broad-write preflight guidance.
+
+## v5 — OpenCode init + Git safety architecture
+
+- Split upstream repo from installed vault.
+- Added scaffold-based install model.

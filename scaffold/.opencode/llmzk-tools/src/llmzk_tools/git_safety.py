@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """Git safety helpers for llmzk.
 
-These helpers are intentionally small wrappers around Git. They do not replace
-normal Git review; they make the llmzk safety workflow easier to invoke from
-OpenCode commands.
+These helpers intentionally wrap a small subset of Git via GitPython. They do
+not replace normal Git review; they make the llmzk safety workflow easier to
+invoke from OpenCode commands.
 """
 from __future__ import annotations
 
-import argparse
 import json
-import subprocess
-import sys
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, Union
+
+from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
+import tyro
 
 try:
     import yaml
@@ -20,34 +21,81 @@ except Exception:  # pragma: no cover
     yaml = None
 
 
-def run_git(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=check,
-    )
+@dataclass
+class Status:
+    """Show Git status summary."""
+
+    path: Path
+    limit: int = 80
+    fail_if_dirty: bool = False
 
 
-def repo_root(path: Path) -> Path:
+@dataclass
+class Preflight:
+    """Check whether broad writes are safe."""
+
+    path: Path
+    limit: int = 50
+
+
+@dataclass
+class Diff:
+    """Show Git diff."""
+
+    path: Path
+    stat: bool = False
+    name_only: bool = False
+    files: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CommitMessage:
+    """Draft a commit message from a passport."""
+
+    passport: Path
+
+
+@dataclass
+class RevertRun:
+    """Revert files associated with a passport."""
+
+    passport: Path
+    path: Path = Path(".")
+    dry_run: bool = False
+    apply: bool = False
+
+
+Command = Union[
+    Annotated[Status, tyro.conf.subcommand(name="status")],
+    Annotated[Preflight, tyro.conf.subcommand(name="preflight")],
+    Annotated[Diff, tyro.conf.subcommand(name="diff")],
+    Annotated[CommitMessage, tyro.conf.subcommand(name="commit-message")],
+    Annotated[RevertRun, tyro.conf.subcommand(name="revert-run")],
+]
+
+
+def repo_root(path: Path) -> tuple[Repo, Path]:
     try:
-        out = run_git(["rev-parse", "--show-toplevel"], path).stdout.strip()
-        return Path(out)
-    except subprocess.CalledProcessError:
+        repo = Repo(path.expanduser().resolve(), search_parent_directories=True)
+    except (InvalidGitRepositoryError, NoSuchPathError):
         raise SystemExit("Not inside a Git repository. Initialize Git first or run from the vault root.")
+    if repo.working_tree_dir is None:
+        raise SystemExit("Git repository has no working tree. Run from a normal vault checkout.")
+    return repo, Path(repo.working_tree_dir).resolve()
 
 
-def porcelain(root: Path) -> list[str]:
-    out = run_git(["status", "--porcelain=v1"], root).stdout
+def porcelain(repo: Repo) -> list[str]:
+    out = repo.git.status("--porcelain=v1")
     return [line for line in out.splitlines() if line.strip()]
 
 
-def cmd_status(args: argparse.Namespace) -> int:
-    root = repo_root(Path(args.path).resolve())
-    branch = run_git(["branch", "--show-current"], root, check=False).stdout.strip() or "(detached)"
-    lines = porcelain(root)
+def run_status(args: Status) -> int:
+    repo, root = repo_root(args.path)
+    try:
+        branch = repo.active_branch.name
+    except TypeError:
+        branch = "(detached)"
+    lines = porcelain(repo)
     print(f"Repository: {root}")
     print(f"Branch: {branch}")
     if not lines:
@@ -62,9 +110,9 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 1 if args.fail_if_dirty else 0
 
 
-def cmd_preflight(args: argparse.Namespace) -> int:
-    root = repo_root(Path(args.path).resolve())
-    lines = porcelain(root)
+def run_preflight(args: Preflight) -> int:
+    repo, _ = repo_root(args.path)
+    lines = porcelain(repo)
     if not lines:
         print("Preflight: clean working tree. Safe to start a broad llmzk run.")
         return 0
@@ -78,19 +126,22 @@ def cmd_preflight(args: argparse.Namespace) -> int:
     return 1
 
 
-def cmd_diff(args: argparse.Namespace) -> int:
-    root = repo_root(Path(args.path).resolve())
+def run_diff(args: Diff) -> int:
+    repo, _ = repo_root(args.path)
     if args.stat:
-        print(run_git(["diff", "--stat"], root, check=False).stdout.rstrip())
-        staged = run_git(["diff", "--cached", "--stat"], root, check=False).stdout.rstrip()
+        print(repo.git.diff("--stat").rstrip())
+        staged = repo.git.diff("--cached", "--stat").rstrip()
         if staged:
             print("\nStaged changes:")
             print(staged)
         return 0
     if args.name_only:
-        print(run_git(["diff", "--name-only"], root, check=False).stdout.rstrip())
+        print(repo.git.diff("--name-only").rstrip())
         return 0
-    print(run_git(["diff", "--", *args.files], root, check=False).stdout.rstrip())
+    if args.files:
+        print(repo.git.diff("--", *args.files).rstrip())
+    else:
+        print(repo.git.diff().rstrip())
     return 0
 
 
@@ -114,7 +165,7 @@ def load_passport(path: Path) -> dict[str, Any]:
 def flatten_paths(value: Any) -> list[str]:
     paths: list[str] = []
     if isinstance(value, str):
-        if value.endswith(".md") or "/" in value:
+        if value.endswith(".md") or value.endswith(".yaml") or "/" in value:
             paths.append(value)
     elif isinstance(value, list):
         for item in value:
@@ -125,8 +176,8 @@ def flatten_paths(value: Any) -> list[str]:
     return paths
 
 
-def cmd_commit_message(args: argparse.Namespace) -> int:
-    passport_path = Path(args.passport).resolve()
+def run_commit_message(args: CommitMessage) -> int:
+    passport_path = args.passport.expanduser().resolve()
     data = load_passport(passport_path)
     workflow_id = data.get("workflow_id") or data.get("id") or passport_path.stem
     workflow_type = data.get("workflow_type") or data.get("command") or "llmzk run"
@@ -154,9 +205,9 @@ def cmd_commit_message(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_revert_run(args: argparse.Namespace) -> int:
-    root = repo_root(Path(args.path).resolve())
-    passport_path = Path(args.passport).resolve()
+def run_revert_run(args: RevertRun) -> int:
+    repo, root = repo_root(args.path)
+    passport_path = args.passport.expanduser().resolve()
     data = load_passport(passport_path)
     outputs = data.get("outputs") or {}
     paths = sorted(set(flatten_paths(outputs)))
@@ -168,6 +219,8 @@ def cmd_revert_run(args: argparse.Namespace) -> int:
     for p in paths:
         print(f"- {p}")
     print()
+    # Dry-run is the default. `dry_run` is retained for compatibility with existing commands.
+    _ = args.dry_run
     if not args.apply:
         print("Dry run only. No files changed.")
         print("To apply, rerun with --apply after explicit user approval.")
@@ -175,57 +228,33 @@ def cmd_revert_run(args: argparse.Namespace) -> int:
 
     for p in paths:
         rel = Path(p)
-        tracked = run_git(["ls-files", "--error-unmatch", str(rel)], root, check=False)
-        if tracked.returncode == 0:
-            run_git(["checkout", "--", str(rel)], root, check=False)
+        try:
+            repo.git.ls_files("--error-unmatch", str(rel))
+            repo.git.checkout("--", str(rel))
             print(f"Restored tracked file: {rel}")
-        else:
+        except GitCommandError:
             target = root / rel
             if target.exists():
+                if target.is_dir():
+                    raise SystemExit(f"Refusing to delete generated directory automatically: {rel}")
                 target.unlink()
                 print(f"Deleted untracked generated file: {rel}")
     return 0
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Git safety helpers for llmzk")
-    sub = parser.add_subparsers(dest="cmd", required=True)
-
-    p = sub.add_parser("status", help="Show Git status summary")
-    p.add_argument("path", nargs="?", default=".")
-    p.add_argument("--limit", type=int, default=80)
-    p.add_argument("--fail-if-dirty", action="store_true")
-    p.set_defaults(func=cmd_status)
-
-    p = sub.add_parser("preflight", help="Check whether broad writes are safe")
-    p.add_argument("path", nargs="?", default=".")
-    p.add_argument("--limit", type=int, default=50)
-    p.set_defaults(func=cmd_preflight)
-
-    p = sub.add_parser("diff", help="Show Git diff")
-    p.add_argument("path", nargs="?", default=".")
-    p.add_argument("--stat", action="store_true")
-    p.add_argument("--name-only", action="store_true")
-    p.add_argument("files", nargs="*")
-    p.set_defaults(func=cmd_diff)
-
-    p = sub.add_parser("commit-message", help="Draft a commit message from a passport")
-    p.add_argument("passport")
-    p.set_defaults(func=cmd_commit_message)
-
-    p = sub.add_parser("revert-run", help="Revert files associated with a passport")
-    p.add_argument("passport")
-    p.add_argument("path", nargs="?", default=".")
-    p.add_argument("--dry-run", action="store_true", help="Preview only; this is the default")
-    p.add_argument("--apply", action="store_true", help="Apply the revert after explicit user approval")
-    p.set_defaults(func=cmd_revert_run)
-    return parser
-
-
 def main() -> int:
-    parser = build_parser()
-    args = parser.parse_args()
-    return int(args.func(args) or 0)
+    command = tyro.cli(Command)
+    if isinstance(command, Status):
+        return run_status(command)
+    if isinstance(command, Preflight):
+        return run_preflight(command)
+    if isinstance(command, Diff):
+        return run_diff(command)
+    if isinstance(command, CommitMessage):
+        return run_commit_message(command)
+    if isinstance(command, RevertRun):
+        return run_revert_run(command)
+    raise AssertionError(f"Unhandled command: {command!r}")
 
 
 if __name__ == "__main__":

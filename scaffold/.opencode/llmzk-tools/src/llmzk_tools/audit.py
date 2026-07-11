@@ -2,7 +2,7 @@
 """Lightweight audit for llmzk vaults."""
 from __future__ import annotations
 
-import argparse
+import tyro
 import re
 from pathlib import Path
 from typing import Any, Iterable
@@ -167,11 +167,8 @@ def write_review_queue(root: Path, issues: dict[str, list[str]]) -> None:
         p.write_text(f"# {name.replace('-', ' ').title()}\n\n{body}\n", encoding="utf-8")
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("root", nargs="?", default=".")
-    args = parser.parse_args()
-    root = Path(args.root)
+def run(root: Path) -> int:
+    """Audit an llmzk vault and write review-queue files."""
     issues = audit(root)
     write_review_queue(root, issues)
     total = sum(len(v) for v in issues.values())
@@ -179,6 +176,10 @@ def main() -> int:
     for k, v in issues.items():
         print(f"  {k}: {len(v)}")
     return 0
+
+
+def main() -> int:
+    return tyro.cli(run)
 
 
 if __name__ == "__main__":

@@ -82,5 +82,5 @@ derived_from:
 ## Repair command
 
 ```bash
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_fix_frontmatter.py . --apply
+.opencode/bin/llmzk fix-frontmatter . --apply
 ```

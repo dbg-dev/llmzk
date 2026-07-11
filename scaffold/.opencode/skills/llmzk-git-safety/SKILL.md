@@ -24,10 +24,10 @@ inspect -> candidate inventory -> write -> audit -> diff -> stage -> commit or r
 ## Useful commands
 
 ```bash
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py status
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py diff --stat
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py preflight
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py commit-message Logs/Passports/<run>.yaml
+.opencode/bin/llmzk git status .
+.opencode/bin/llmzk git diff . --stat
+.opencode/bin/llmzk git preflight .
+.opencode/bin/llmzk git commit-message Logs/Passports/<run>.yaml
 ```
 
 Read `references/git_safety_protocol.md` for the full protocol.

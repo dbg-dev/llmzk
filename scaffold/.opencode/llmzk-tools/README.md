@@ -1,19 +1,29 @@
-# llmzk tools
+# llmzk-tools
 
-Small Python utilities used by OpenCode commands for audit, link normalization,
-frontmatter cleanup, run logs, install checks, Git safety, and smoke tests.
+Deterministic utilities used inside an installed `llmzk` vault.
 
-Run from the vault root, for example:
+This is the runtime Python project for the installed vault. It intentionally lives under `.opencode/llmzk-tools/` so the vault root does not need to be a Python project.
 
-```bash
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_doctor.py .
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_audit.py .
-```
+## CLI entry points
 
-## Git safety helper
+The package exposes console scripts:
 
 ```bash
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py status .
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py preflight .
-uv run --project .opencode/llmzk-tools python .opencode/llmzk-tools/scripts/llmzk_git_safety.py diff . --stat
+llmzk-audit
+llmzk-doctor
+llmzk-fix-frontmatter
+llmzk-git-safety
+llmzk-new-run
+llmzk-normalize-links
+llmzk-smoke-test
 ```
+
+The installed vault normally invokes these through the wrapper:
+
+```bash
+.opencode/bin/llmzk audit .
+.opencode/bin/llmzk doctor .
+.opencode/bin/llmzk git preflight .
+```
+
+The CLIs use `tyro`. Git-facing operations use `GitPython`.
