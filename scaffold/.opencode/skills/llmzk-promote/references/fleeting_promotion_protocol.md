@@ -22,3 +22,8 @@ For bridge and contradiction/tension candidates, apply `../llmzk-ingest/referenc
 - `Compare Nielsen with reverse-mode AD` → bridge candidate only if the note captures a specific transformation, such as error propagation as a VJP/pullback.
 - `This notation is ugly` → usually a decision-log observation, not a contradiction note.
 - `Finite differences are intuitive but scale poorly with parameter count` → contradiction/tension note if the trade-off is central.
+
+
+## Candidate review gate
+
+For fleeting promotion, `/llmzk-promote` and `/llmzk-promote-candidates` should first create a candidate review file in `Logs/Candidate Reviews/`. Do not create durable concept, permanent, bridge, contradiction/tension, or index notes until `/llmzk-write-approved` is run on that review file.

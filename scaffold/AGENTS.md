@@ -17,7 +17,9 @@ Treat the numbered folders and `Logs/` as vault-owned working content.
 
 Before any broad write operation, run Git preflight. If the working tree is dirty, stop unless the user explicitly says to continue with mixed changes.
 
-After any broad write operation, run frontmatter cleanup when relevant, run audit, and show a concise Git diff summary.
+For ingest and promote, use the candidate review gate: create a candidate review file first, let the user review/edit it, then write durable notes only via `/llmzk-write-approved`.
+
+After any durable write operation, run frontmatter cleanup when relevant, run audit, and show a concise Git diff summary.
 
 Use `/llmzk-doctor` after installation, after harness updates, or when command behaviour looks inconsistent.
 

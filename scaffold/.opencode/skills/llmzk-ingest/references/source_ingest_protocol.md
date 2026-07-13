@@ -28,7 +28,7 @@ Capture what the source says, source-specifically:
 
 ## Durable notes
 
-Extract durable notes only after creating the candidate inventory.
+Extract durable notes only in write-approved mode, after creating and reviewing the candidate review file.
 
 For technical sources, look especially for:
 
@@ -42,3 +42,8 @@ For technical sources, look especially for:
 - conceptual bridges.
 
 Do not create concept notes for authors, source titles, paper titles, publishers, years, or URLs.
+
+
+## Candidate review gate
+
+For source ingest, `/llmzk-ingest` and `/llmzk-ingest-candidates` should first create a candidate review file in `Logs/Candidate Reviews/`. Do not create source, literature, concept, permanent, bridge, contradiction, or index notes until `/llmzk-write-approved` is run on that review file.

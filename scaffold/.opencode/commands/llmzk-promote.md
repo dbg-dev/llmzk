@@ -1,25 +1,9 @@
 ---
-description: Promote selected fleeting notes into durable Zettelkasten notes
+description: Safely promote fleeting notes by first creating a candidate review
 ---
 
-Run Git preflight first:
+This command is safe-by-default. It is an alias for `/llmzk-promote-candidates`.
 
-```bash
-.opencode/bin/llmzk git preflight .
-```
+Run `/llmzk-promote-candidates $ARGUMENTS`.
 
-If preflight reports a dirty working tree, stop before broad writes unless the user explicitly says to continue with mixed changes.
-
-Use the `llmzk-promote` skill on `$ARGUMENTS`.
-
-Use installed `obsidian-markdown` for Obsidian syntax. Classify fleeting notes before promoting. Do not convert all fleeting notes into concept notes.
-
-After notes are written, run:
-
-```bash
-.opencode/bin/llmzk fix-frontmatter . --apply
-.opencode/bin/llmzk audit .
-.opencode/bin/llmzk git diff . --stat
-```
-
-End by summarising created/changed files and the audit result. Do not stage, commit, reset, clean, or revert unless the user explicitly asks.
+Do not write durable notes directly from `/llmzk-promote`. Durable notes are written only by `/llmzk-write-approved <candidate-review-file>` after the user reviews the candidate file.

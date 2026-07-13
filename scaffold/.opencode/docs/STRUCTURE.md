@@ -34,6 +34,10 @@ Templates/
 08 Wiki Articles/
 09 Media/
 Logs/
+  Candidate Reviews/
+  Decision Logs/
+  Passports/
+  Review Queue/
 ```
 
 The installed vault is the Git safety boundary.
@@ -53,3 +57,7 @@ That project exposes console scripts via `[project.scripts]`. OpenCode commands 
 ```
 
 The vault root is deliberately not a Python project.
+
+## Candidate review gate
+
+Ingest and promote workflows write candidate review artifacts to `Logs/Candidate Reviews/` first. Durable notes are written only after `/llmzk-write-approved` consumes an approved candidate review.

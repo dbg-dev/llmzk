@@ -7,6 +7,7 @@ from pathlib import Path
 from llmzk_tools.normalize_links import normalize_text
 from llmzk_tools.audit import audit
 from llmzk_tools.fix_frontmatter import fix_text
+from llmzk_tools.review import validate_review
 
 
 def test_normalize_links():
@@ -71,12 +72,74 @@ connects:
         assert issues["frontmatter-issues"]
 
 
+def test_candidate_review_validate():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        p = root / "review.md"
+        p.write_text("""---
+type: candidate_review
+status: proposed
+mode: ingest
+input:
+  - "00 Inbox/example.md"
+created: 2026-07-13
+applied: false
+schema_version: 1
+---
+
+# Candidate Review - Example
+
+## Source
+
+Input:
+- `00 Inbox/example.md`
+
+## Proposed notes
+
+### Source notes
+- [x] `01 Sources/Source - Example.md` — source wrapper.
+
+### Literature notes
+- [x] `02 Literature Notes/Literature - Example.md` — source compression.
+
+### Concept notes
+- [x] `04 Concept Notes/Example concept.md` — reusable concept.
+
+### Permanent notes
+- [x] `03 Permanent Notes/Example claim.md` — durable claim.
+
+### Bridge notes
+- [ ] `05 Bridge Notes/Example bridge.md` — weak bridge rejected.
+
+### Contradiction/tension notes
+- [ ] `06 Contradiction Notes/Example tension.md` — no durable tension.
+
+### Index notes
+- [x] `07 Index Notes/Index - Example.md` — map.
+
+## Deliberately not created
+
+- [ ] `Author` — metadata, not concept.
+
+## Reviewer instructions
+
+Edit checkboxes before writing.
+
+## Reviewer notes
+
+None.
+""", encoding="utf-8")
+        code, findings = validate_review(p)
+        assert code == 0, findings
+
+
 def main() -> int:
     test_normalize_links()
     test_normalize_ignores_code_fences()
     test_audit_math_fence()
     test_fix_frontmatter_nested_lists()
     test_audit_frontmatter_issues()
+    test_candidate_review_validate()
     print("Smoke test passed.")
     return 0
 

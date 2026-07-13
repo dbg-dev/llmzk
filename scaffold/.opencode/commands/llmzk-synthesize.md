@@ -10,7 +10,7 @@ Run Git preflight first:
 
 If preflight reports a dirty working tree, stop before broad writes unless the user explicitly says to continue with mixed changes.
 
-Use the `llmzk-synthesize` skill on `$ARGUMENTS`.
+Use the `llmzk-synthesize` skill on `$ARGUMENTS`. Synthesis is not part of the v5.3 candidate review gate; keep it cautious and experimental.
 
 Use installed `obsidian-markdown` for Obsidian note syntax.
 

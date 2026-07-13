@@ -1,30 +1,9 @@
 ---
-description: Ingest a source from 00 Inbox into the Zettelkasten
+description: Safely ingest an inbox source by first creating a candidate review
 ---
 
-Run Git preflight first:
+This command is safe-by-default. It is an alias for `/llmzk-ingest-candidates`.
 
-```bash
-.opencode/bin/llmzk git preflight .
-```
+Run `/llmzk-ingest-candidates $ARGUMENTS`.
 
-If preflight reports a dirty working tree, stop before broad writes unless the user explicitly says to continue with mixed changes.
-
-Use the `llmzk-ingest` skill on `$ARGUMENTS`.
-
-Use installed Obsidian skills for Obsidian mechanics:
-
-- `obsidian-markdown` for Markdown, wikilinks, frontmatter/properties, callouts, embeds, and MathJax-bearing notes.
-- `obsidian-cli` only when live vault read/search/create/backlink operations are useful.
-
-Follow the candidate inventory phase before writing final notes.
-
-After notes are written, run:
-
-```bash
-.opencode/bin/llmzk fix-frontmatter . --apply
-.opencode/bin/llmzk audit .
-.opencode/bin/llmzk git diff . --stat
-```
-
-End by summarising created/changed files and the audit result. Do not stage, commit, reset, clean, or revert unless the user explicitly asks.
+Do not write durable notes directly from `/llmzk-ingest`. Durable notes are written only by `/llmzk-write-approved <candidate-review-file>` after the user reviews the candidate file.

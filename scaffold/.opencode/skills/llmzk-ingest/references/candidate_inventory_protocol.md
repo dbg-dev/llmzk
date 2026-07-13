@@ -1,6 +1,6 @@
 # Candidate Inventory Protocol
 
-Before writing final notes, produce a candidate inventory in the decision log.
+Before writing durable notes, produce a candidate inventory. In v5.3 this inventory is normally materialised as a candidate review file in `Logs/Candidate Reviews/` before any durable note writes. During write-approved mode, the final decision log should record the accepted/rejected version of the inventory.
 
 ## Inventory sections
 
@@ -44,3 +44,10 @@ Before writing final notes, produce a candidate inventory in the decision log.
 - Do not force contradiction notes; weak tensions should be folded into literature notes, concept caveats, or decision-log non-created notes.
 - Create an index note when the source opens or updates a topic area.
 - Before finalising bridge or contradiction candidates, apply `high_judgement_notes_protocol.md`.
+
+
+## Candidate review gate
+
+For `/llmzk-ingest-candidates` and `/llmzk-promote-candidates`, the candidate inventory must be written into a candidate review file and the workflow must stop before durable notes are created.
+
+For `/llmzk-write-approved`, the approved `[x]` items in the candidate review file are the source of truth. Unchecked `[ ]` candidates must not be written.

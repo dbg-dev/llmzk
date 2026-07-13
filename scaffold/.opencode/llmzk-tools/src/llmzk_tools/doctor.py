@@ -25,6 +25,7 @@ VAULT_FOLDERS = [
 LOG_FOLDERS = [
     "Logs/Passports",
     "Logs/Decision Logs",
+    "Logs/Candidate Reviews",
     "Logs/Review Queue",
 ]
 
@@ -48,6 +49,10 @@ REQUIRED_COMMANDS = [
     "llmzk-git-revert-run.md",
     "llmzk-git-status.md",
     "llmzk-ingest.md",
+    "llmzk-write-approved.md",
+    "llmzk-review-validate.md",
+    "llmzk-promote-candidates.md",
+    "llmzk-ingest-candidates.md",
     "llmzk-normalize-links.md",
     "llmzk-promote.md",
     "llmzk-review.md",
@@ -76,6 +81,7 @@ REQUIRED_TOOLS = [
     "git_safety.py",
     "new_run.py",
     "normalize_links.py",
+    "review.py",
     "smoke_test.py",
 ]
 REQUIRED_TEMPLATES = [
@@ -88,6 +94,7 @@ REQUIRED_TEMPLATES = [
     "index-note.md",
     "passport.md",
     "decision-log.md",
+    "candidate-review.md",
 ]
 
 
@@ -191,6 +198,7 @@ def check_git_visibility(findings: list[Finding], root: Path) -> None:
         "08 Wiki Articles/__llmzk_doctor_probe__.md",
         "Logs/Passports/__llmzk_doctor_probe__.yaml",
         "Logs/Decision Logs/__llmzk_doctor_probe__.md",
+        "Logs/Candidate Reviews/__llmzk_doctor_probe__.md",
     ]
     for rel in probes:
         try:
@@ -243,6 +251,7 @@ def check_tool_project(findings: list[Finding], root: Path) -> None:
         "llmzk-git-safety",
         "llmzk-new-run",
         "llmzk-normalize-links",
+        "llmzk-review",
         "llmzk-smoke-test",
     ]
     for name in required:
@@ -295,7 +304,7 @@ def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = Fal
 
 def doctor(
     vault: Path,
-    /,  # Mark the end of positional arguments.
+    /,
     fail_if_dirty: bool = False,
     quiet_ok: bool = False,
     json: bool = False,

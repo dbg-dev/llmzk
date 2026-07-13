@@ -7,28 +7,30 @@ Git is the safety layer for this installed `llmzk` vault.
 For broad `llmzk` operations, use Git as the transaction boundary:
 
 ```text
-preflight -> candidate inventory -> write -> cleanup -> audit -> diff -> stage -> commit/revert
+preflight -> candidate review -> user approval -> write approved -> cleanup -> audit -> diff -> stage -> commit/revert
 ```
 
 Recommended procedure:
 
 1. Run `/llmzk-git-preflight` or the command's built-in preflight step.
 2. Stop if the working tree is dirty, unless the user explicitly approves mixing new generated changes with existing edits.
-3. Produce the candidate inventory before writing durable notes.
-4. Write notes, passports, and decision logs.
-5. Run frontmatter cleanup where relevant.
-6. Run audit.
-7. Show a concise Git diff summary.
-8. Stage only accepted files.
-9. Commit with a message that references the passport and decision log.
-10. Revert or discard changes that failed review.
+3. Produce a candidate review file in `Logs/Candidate Reviews/` before writing durable notes.
+4. User reviews/edits checkboxes and reviewer notes.
+5. Write approved `[x]` candidates only via `/llmzk-write-approved`.
+6. Write notes, passports, and decision logs.
+7. Run frontmatter cleanup where relevant.
+8. Run audit.
+9. Show a concise Git diff summary.
+10. Stage only accepted files.
+11. Commit with a message that references the candidate review, passport, and decision log.
+12. Revert or discard changes that failed review.
 
 ## Strict preflight rule
 
-Before broad write commands such as `/llmzk-ingest`, `/llmzk-promote`, and `/llmzk-synthesize`, run:
+Before broad commands such as `/llmzk-ingest-candidates`, `/llmzk-promote-candidates`, and `/llmzk-write-approved`, run:
 
 ```bash
-.opencode/bin/llmzk git preflight . .
+.opencode/bin/llmzk git preflight .
 ```
 
 If preflight fails, do not continue unless the user explicitly says to continue with mixed changes.
@@ -99,3 +101,10 @@ git switch -c llmzk/ingest-topic-name
 ```
 
 Merge only after the generated note graph is reviewed.
+
+
+## Candidate review gate
+
+`/llmzk-ingest` and `/llmzk-promote` are safe aliases that create candidate review files only. Durable notes are written by `/llmzk-write-approved <candidate-review-file>` after user review.
+
+Candidate review files live in `Logs/Candidate Reviews/` and are tracked by Git by default. They form the human approval artifact before durable note writes.

@@ -38,3 +38,16 @@ opencode
 ```
 
 The vault itself is the Git safety boundary. The source repo is only the upstream scaffold and installer.
+
+
+## First ingest workflow
+
+```text
+/llmzk-ingest 00 Inbox/<source>.md
+```
+
+This creates a candidate review in `Logs/Candidate Reviews/` and stops before durable notes. Edit the review file, then run:
+
+```text
+/llmzk-write-approved Logs/Candidate Reviews/<candidate-review-file>.md
+```

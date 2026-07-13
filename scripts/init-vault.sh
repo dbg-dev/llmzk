@@ -177,6 +177,7 @@ VAULT_FOLDERS=(
 LOG_FOLDERS=(
   "Logs/Passports"
   "Logs/Decision Logs"
+  "Logs/Candidate Reviews"
   "Logs/Review Queue"
 )
 
@@ -233,4 +234,5 @@ cat <<NEXT
   /llmzk-doctor
   /llmzk-git-status
   /llmzk-ingest 00 Inbox/<source>.md
+  # Review the candidate file, then run /llmzk-write-approved Logs/Candidate Reviews/<file>.md
 NEXT

@@ -5,8 +5,8 @@ This schema defines llmzk-specific properties. For general Obsidian property/fro
 ## Core frontmatter fields
 
 ```yaml
-type: concept | permanent | bridge | contradiction | index | source | literature | wiki-article
-status: seed | active | reviewed | synthesized | archived | ingested | partial | deprecated
+type: concept | permanent | bridge | contradiction | index | source | literature | wiki-article | candidate_review
+status: seed | active | reviewed | synthesized | archived | ingested | partial | deprecated | proposed | edited | applied | rejected | superseded
 schema_version: 1
 ```
 
@@ -62,6 +62,24 @@ Do not use `status: raw` for processed source notes in `01 Sources/`; raw materi
 
 When generalising backpropagation equations beyond sigmoid activations, prefer precise wording such as: “The equations are not specific to sigmoid activations; they apply to differentiable elementwise activation functions, with the activation derivative changed accordingly.” Avoid saying they hold for “any activation function.”
 
+
+## Candidate review frontmatter
+
+Candidate review files live in `Logs/Candidate Reviews/` and use:
+
+```yaml
+type: candidate_review
+status: proposed # proposed | edited | applied | rejected | superseded
+mode: ingest # ingest | promote
+input:
+  - "00 Inbox/example.md"
+created: YYYY-MM-DD
+applied: false
+schema_version: 1
+```
+
+Candidate review files are workflow artifacts, not durable knowledge notes. They are still tracked by Git because they are the approval record for durable writes.
+
 ## Note types
 
 - `source`: source metadata and orientation.
@@ -72,3 +90,4 @@ When generalising backpropagation equations beyond sigmoid activations, prefer p
 - `contradiction`: tension, contradiction, trade-off, disagreement.
 - `index`: navigational map.
 - `wiki-article`: synthesized output.
+- `candidate_review`: proposed/approved note candidates used as a pre-write review gate.

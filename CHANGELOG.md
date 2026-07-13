@@ -1,5 +1,17 @@
 # Changelog
 
+## v5.3 — Candidate review gate
+
+- Added candidate review gate for ingest and promote workflows.
+- Added `Logs/Candidate Reviews/` to installed vaults.
+- Added `Templates/candidate-review.md`.
+- Added safe candidate commands: `/llmzk-ingest-candidates` and `/llmzk-promote-candidates`.
+- Changed `/llmzk-ingest` and `/llmzk-promote` into safe aliases that create candidate reviews only.
+- Added `/llmzk-write-approved` to write durable notes from approved `[x]` candidates.
+- Added `/llmzk-review-validate` and `llmzk-review` deterministic validation/marking tool.
+- Updated ingest/promote skills with candidate-review mode and write-approved mode.
+- Kept synthesis out of scope for this review gate.
+
 ## v5.2.1 — Bash init + scaffold-owned tools cleanup
 
 - Replaced the root Python `llmzk-init` package with `scripts/init-vault.sh`.

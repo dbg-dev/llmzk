@@ -29,7 +29,7 @@ Templates/                 reusable note templates
 07 Index Notes/
 08 Wiki Articles/
 09 Media/
-Logs/                      passports, decision logs, review queues
+Logs/                      candidate reviews, passports, decision logs, review queues
 ```
 
 The numbered folders and `Logs/` are real vault-owned folders. They are created with `.gitkeep` placeholders, and generated durable notes/logs are Git-visible by default so vault safety can use `git status` and `git diff`.
@@ -57,7 +57,7 @@ The installed vault is initialized as its own Git repository unless you pass `--
 The intended workflow is:
 
 ```text
-git preflight -> candidate inventory -> apply changes -> cleanup -> audit -> git diff -> review -> stage -> commit/revert
+git preflight -> candidate review -> user approval -> write approved -> cleanup -> audit -> git diff -> stage -> commit/revert
 ```
 
 Agents may inspect Git status and diffs, but must not stage, commit, reset, clean, or revert without explicit user approval.
@@ -65,8 +65,12 @@ Agents may inspect Git status and diffs, but must not stage, commit, reset, clea
 ## Main OpenCode commands in an installed vault
 
 ```text
-/llmzk-ingest <path>
-/llmzk-promote <path-or-folder>
+/llmzk-ingest <path>                  # safe alias for candidate review
+/llmzk-ingest-candidates <path>       # create candidate review only
+/llmzk-promote <path-or-folder>       # safe alias for candidate review
+/llmzk-promote-candidates <path>      # create candidate review only
+/llmzk-write-approved <review-file>   # write approved [x] candidates
+/llmzk-review-validate <review-file>
 /llmzk-audit
 /llmzk-normalize-links --dry-run
 /llmzk-fix-frontmatter --apply
@@ -79,6 +83,23 @@ Agents may inspect Git status and diffs, but must not stage, commit, reset, clea
 /llmzk-synthesize <topic>
 ```
 
+
+## Candidate review gate
+
+In v5.3, ingest and promote are review-gated by default:
+
+```text
+/llmzk-ingest <source>
+  -> creates `Logs/Candidate Reviews/...md` only
+
+# edit checkboxes and reviewer notes
+
+/llmzk-write-approved <candidate-review-file>
+  -> writes approved durable notes, passport, decision log, audit, and Git diff
+```
+
+Synthesize is intentionally out of scope for the v5.3 review gate.
+
 ## Installed-vault tool wrapper
 
 The installed vault includes a small wrapper:
@@ -88,6 +109,7 @@ The installed vault includes a small wrapper:
 .opencode/bin/llmzk doctor .
 .opencode/bin/llmzk git preflight .
 .opencode/bin/llmzk git diff . --stat
+.opencode/bin/llmzk review-validate "Logs/Candidate Reviews/example.md"
 ```
 
 The wrapper hides the `uv run --project .opencode/llmzk-tools ...` implementation detail from OpenCode command files.
