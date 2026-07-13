@@ -142,3 +142,8 @@ scaffold/.opencode/llmzk-tools/   installed-vault Python tools package
 scaffold/.opencode/bin/llmzk      installed-vault wrapper
 scaffold/Templates/               reusable note templates
 ```
+
+
+## v5.3.1 bugfix notes
+
+This release fixes audit false positives for wikilinks whose titles contain periods such as `w.r.t.`, regenerates Review Queue reports on each audit, and normalises candidate-review status timestamps when reviews are marked applied/rejected/superseded.

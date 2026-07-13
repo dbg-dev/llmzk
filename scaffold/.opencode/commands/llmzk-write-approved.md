@@ -1,5 +1,5 @@
 ---
-description: Write durable notes from an approved candidate review file
+description: Write approved notes from an approved candidate review file
 ---
 
 Input: `$ARGUMENTS` must be a candidate review file from `Logs/Candidate Reviews/`.

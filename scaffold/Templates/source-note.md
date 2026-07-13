@@ -20,6 +20,6 @@ author: Author name
 
 - ...
 
-## Candidate notes
+## Derived notes
 
 - [[...]] — because ...

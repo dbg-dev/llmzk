@@ -11,7 +11,7 @@ Capture:
 - key sections;
 - key source claims;
 - central formal machinery, if any;
-- candidate notes;
+- derived notes;
 - related sources.
 
 ## Literature note

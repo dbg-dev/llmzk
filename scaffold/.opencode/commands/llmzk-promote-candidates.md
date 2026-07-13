@@ -1,5 +1,5 @@
 ---
-description: Propose candidate durable notes for fleeting material without writing durable notes
+description: Propose candidate durable notes for fleeting material without writing approved notes
 ---
 
 Run Git preflight first:
@@ -15,7 +15,7 @@ Use the `llmzk-promote` skill on `$ARGUMENTS`, but run it in **candidate-review 
 - inspect the fleeting note or cluster
 - produce a candidate inventory
 - write exactly one candidate review file in `Logs/Candidate Reviews/`
-- do **not** write durable notes in `03 Permanent Notes/` through `08 Wiki Articles/`
+- do **not** write approved notes in `03 Permanent Notes/` through `08 Wiki Articles/`
 - do **not** write passport or decision log yet, except if explicitly needed as placeholders
 
 Use `Templates/candidate-review.md` as the form. Include proposed concept, permanent, bridge, contradiction/tension, and index notes. Include deliberately-not-created candidates and reviewer notes.

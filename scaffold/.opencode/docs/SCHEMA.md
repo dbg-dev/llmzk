@@ -62,6 +62,8 @@ Do not use `status: raw` for processed source notes in `01 Sources/`; raw materi
 
 When generalising backpropagation equations beyond sigmoid activations, prefer precise wording such as: “The equations are not specific to sigmoid activations; they apply to differentiable elementwise activation functions, with the activation derivative changed accordingly.” Avoid saying they hold for “any activation function.”
 
+When comparing finite differences with backpropagation, do not describe backpropagation as “exponentially” cheaper. Prefer: “finite differences require work proportional to the number of parameters, while backpropagation computes all gradients with one backward pass.”
+
 
 ## Candidate review frontmatter
 

@@ -72,6 +72,26 @@ connects:
         assert issues["frontmatter-issues"]
 
 
+def test_audit_wrt_title_not_truncated():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        src = root / "01 Sources" / "Source - Example.md"
+        src.parent.mkdir(parents=True)
+        src.write_text("---\ntype: source\nstatus: ingested\n---\n\n# Source\n", encoding="utf-8")
+        target = root / "03 Permanent Notes" / "Defining neuron error as gradient w.r.t. weighted input makes backpropagation algebraically simple.md"
+        target.parent.mkdir(parents=True)
+        target.write_text('---\ntype: permanent\nsource_trail:\n  - "[[Source - Example]]"\n---\n\n# Target\n', encoding="utf-8")
+        source = root / "04 Concept Notes" / "Neuron error delta.md"
+        source.parent.mkdir(parents=True)
+        source.write_text(
+            '---\ntype: concept\nsource_trail:\n  - "[[Source - Example]]"\n---\n\n'
+            "See [[Defining neuron error as gradient w.r.t. weighted input makes backpropagation algebraically simple]].\n",
+            encoding="utf-8",
+        )
+        issues = audit(root)
+        assert issues["unresolved-links"] == []
+
+
 def test_candidate_review_validate():
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -139,6 +159,7 @@ def main() -> int:
     test_audit_math_fence()
     test_fix_frontmatter_nested_lists()
     test_audit_frontmatter_issues()
+    test_audit_wrt_title_not_truncated()
     test_candidate_review_validate()
     print("Smoke test passed.")
     return 0

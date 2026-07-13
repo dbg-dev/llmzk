@@ -1,5 +1,14 @@
 # Changelog
 
+## v5.3.1 — audit and review-gate bugfixes
+
+- Fixed unresolved-link false positives for note titles containing periods such as `w.r.t.`.
+- Regenerated audit Review Queue files from scratch each audit run to avoid stale reports.
+- Normalised candidate review frontmatter booleans and timestamps when marking reviews.
+- Renamed source-note `Candidate notes` sections to `Derived notes` after the candidate-review gate.
+- Added finite-difference/backpropagation wording guidance to avoid incorrect “exponentially cheaper/worse” claims.
+
+
 ## v5.3 — Candidate review gate
 
 - Added candidate review gate for ingest and promote workflows.

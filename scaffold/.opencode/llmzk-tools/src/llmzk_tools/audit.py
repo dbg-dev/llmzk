@@ -2,6 +2,7 @@
 """Lightweight audit for llmzk vaults."""
 from __future__ import annotations
 
+import datetime as dt
 import tyro
 import re
 from pathlib import Path
@@ -46,17 +47,37 @@ def iter_md(root: Path, *, include_inbox: bool = False) -> Iterable[Path]:
         yield p
 
 
+def markdown_note_title(path: Path) -> str:
+    """Return an Obsidian note title from a Markdown file path.
+
+    Avoid ``Path.stem`` here because note titles can legitimately contain
+    periods such as ``w.r.t.``. We only want to remove the final Markdown
+    suffix, not reinterpret parts of the title as file extensions.
+    """
+    name = path.name
+    return name[:-3] if name.endswith(".md") else name
+
+
 def note_stems(root: Path) -> set[str]:
-    return {p.stem for p in iter_md(root, include_inbox=False)}
+    return {markdown_note_title(p) for p in iter_md(root, include_inbox=False)}
 
 
 def target_stem(target: str) -> str:
+    """Return the comparable note title from raw wikilink target text.
+
+    Wikilinks are not filesystem paths. Do not call ``Path(target).stem`` on
+    raw wikilink targets, because titles such as ``w.r.t. weighted input``
+    would be truncated as if they had a suffix.
+    """
     target = target.replace(r"\|", "|")
     target = target.split("|", 1)[0]
     target = target.split("#", 1)[0]
+    target = target.strip().strip("/")
     if target.endswith(".md"):
         target = target[:-3]
-    return Path(target).stem
+    if "/" in target:
+        target = target.rsplit("/", 1)[-1]
+    return target.strip()
 
 
 def split_frontmatter(text: str) -> tuple[str | None, str]:
@@ -158,13 +179,31 @@ def audit(root: Path) -> dict[str, list[str]]:
 def write_review_queue(root: Path, issues: dict[str, list[str]]) -> None:
     rq = root / "Logs" / "Review Queue"
     rq.mkdir(parents=True, exist_ok=True)
+
+    # Review Queue is machine-generated audit output. Clear previous markdown
+    # reports before writing the current set so stale false positives do not
+    # survive after the graph has been fixed.
+    for old_report in rq.glob("*.md"):
+        old_report.unlink()
+
+    generated_at = dt.datetime.now().astimezone().isoformat(timespec="seconds")
     for name, items in issues.items():
         p = rq / f"{name}.md"
         if items:
             body = "\n".join(f"- {item}" for item in items)
         else:
             body = "- None"
-        p.write_text(f"# {name.replace('-', ' ').title()}\n\n{body}\n", encoding="utf-8")
+        title = name.replace("-", " ").title()
+        p.write_text(
+            "---\n"
+            "type: audit_report\n"
+            f"generated_at: {generated_at!r}\n"
+            f"issue_type: {name!r}\n"
+            f"issue_count: {len(items)}\n"
+            "---\n\n"
+            f"# {title}\n\n{body}\n",
+            encoding="utf-8",
+        )
 
 
 def run(root: Path) -> int:

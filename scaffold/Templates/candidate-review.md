@@ -21,7 +21,7 @@ Mode:
 
 ## Proposed notes
 
-Edit checkboxes before writing durable notes. Approved `[x]` candidates are eligible to be written; unchecked `[ ]` candidates should not be written.
+Edit checkboxes before writing approved notes. Approved `[x]` candidates are eligible to be written; unchecked `[ ]` candidates should not be written.
 
 ### Source notes
 
@@ -58,7 +58,7 @@ Edit checkboxes before writing durable notes. Approved `[x]` candidates are elig
 
 ## Reviewer instructions
 
-Before writing durable notes:
+Before writing approved notes:
 
 - Change `[x]` to `[ ]` to reject a candidate.
 - Edit a filename/title to rename a candidate.

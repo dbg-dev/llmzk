@@ -27,3 +27,10 @@ The installed vault normally invokes these through the wrapper:
 ```
 
 The CLIs use `tyro`. Git-facing operations use `GitPython`.
+
+
+## v0.5.3.1 fixes
+
+- Audit resolver no longer uses `Path.stem` on raw wikilink targets.
+- Review Queue audit reports are regenerated each run.
+- Candidate review mark command normalises YAML booleans and ISO timestamps.

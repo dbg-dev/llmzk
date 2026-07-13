@@ -6,7 +6,7 @@ Use this protocol for Zettelkasten substance.
 
 ## Source notes
 
-- Record source identity, summary, key sections, key claims, and candidate notes.
+- Record source identity, summary, key sections, key claims, and derived notes.
 - Do not turn authors or source titles into concept notes.
 
 ## Literature notes

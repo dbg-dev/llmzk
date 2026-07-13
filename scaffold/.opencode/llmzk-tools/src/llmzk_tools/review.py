@@ -83,8 +83,27 @@ def split_frontmatter(text: str) -> tuple[dict, str, str | None]:
     return data if isinstance(data, dict) else {}, text[match.end():], raw
 
 
+def normalize_frontmatter_value(value):
+    if isinstance(value, (dt.datetime, dt.date)):
+        return value.isoformat()
+    if isinstance(value, list):
+        return [normalize_frontmatter_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: normalize_frontmatter_value(item) for key, item in value.items()}
+    return value
+
+
+def normalize_frontmatter_data(data: dict) -> dict:
+    return {key: normalize_frontmatter_value(value) for key, value in data.items()}
+
+
+def now_iso() -> str:
+    return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
 def dump_frontmatter(data: dict, body: str) -> str:
-    raw = yaml.safe_dump(data, sort_keys=False, allow_unicode=True).strip()
+    normalized = normalize_frontmatter_data(data)
+    raw = yaml.safe_dump(normalized, sort_keys=False, allow_unicode=True).strip()
     return f"---\n{raw}\n---\n{body if body.startswith(chr(10)) else chr(10) + body}"
 
 
@@ -199,15 +218,17 @@ def run_mark(args: Mark) -> int:
     if data.get("type") != "candidate_review":
         raise SystemExit("Cannot mark review: frontmatter type must be candidate_review")
     data["status"] = args.status
+    timestamp = now_iso()
+    data["modified"] = timestamp
     if args.status == "applied":
         data["applied"] = True
-        data["applied_at"] = dt.date.today().isoformat()
+        data["applied_at"] = timestamp
     elif args.status == "rejected":
         data["applied"] = False
-        data["rejected_at"] = dt.date.today().isoformat()
+        data["rejected_at"] = timestamp
     elif args.status == "superseded":
         data["applied"] = False
-        data["superseded_at"] = dt.date.today().isoformat()
+        data["superseded_at"] = timestamp
     path.write_text(dump_frontmatter(data, body), encoding="utf-8")
     print(f"Marked {path} as {args.status}")
     return 0

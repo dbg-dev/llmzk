@@ -54,7 +54,7 @@ superseded
 
 ## Candidate review mode
 
-When a command asks for candidates, do not write durable notes.
+When a command asks for candidates, do not write approved notes.
 
 Allowed writes:
 

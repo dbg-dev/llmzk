@@ -14,7 +14,7 @@ Recommended procedure:
 
 1. Run `/llmzk-git-preflight` or the command's built-in preflight step.
 2. Stop if the working tree is dirty, unless the user explicitly approves mixing new generated changes with existing edits.
-3. Produce a candidate review file in `Logs/Candidate Reviews/` before writing durable notes.
+3. Produce a candidate review file in `Logs/Candidate Reviews/` before writing approved notes.
 4. User reviews/edits checkboxes and reviewer notes.
 5. Write approved `[x]` candidates only via `/llmzk-write-approved`.
 6. Write notes, passports, and decision logs.

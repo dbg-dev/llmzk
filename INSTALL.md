@@ -51,3 +51,8 @@ This creates a candidate review in `Logs/Candidate Reviews/` and stops before du
 ```text
 /llmzk-write-approved Logs/Candidate Reviews/<candidate-review-file>.md
 ```
+
+
+## Audit notes
+
+Review Queue reports are regenerated on each audit run. Treat `Logs/Review Queue/` as machine-generated output, not hand-maintained notes.

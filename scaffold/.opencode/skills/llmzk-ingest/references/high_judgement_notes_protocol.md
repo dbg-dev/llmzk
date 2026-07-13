@@ -126,3 +126,7 @@ Strong titles:
 - `Weighted input makes neuron error a local chain-rule variable`
 - `Backpropagation computes gradients cheaply by introducing indirect error variables`
 - `Inference-time scaling trades reasoning quality against deployment cost`
+
+## Mathematical precision guardrails
+
+When creating a contradiction/tension note about finite differences versus backpropagation, do not say the finite-difference method is “exponentially worse”. The cost difference is tied to parameter count: finite differences require extra forward evaluations proportional to the number of parameters, while backpropagation computes all gradients with one backward pass. Use “orders of magnitude more expensive” or “worse by a factor proportional to the number of parameters” when that is the intended claim.
