@@ -60,6 +60,16 @@ Use status values narrowly. In particular:
 
 Do not use `status: raw` for processed source notes in `01 Sources/`; raw material lives in `00 Inbox/`.
 
+## Link disambiguation
+
+If a durable note links to a title that also exists in `00 Fleeting Notes/`, path-qualify the durable target and use an alias:
+
+```markdown
+[[04 Concept Notes/Automatic differentiation|Automatic differentiation]]
+```
+
+If a wikilink contains a slash, the audit treats it as an exact vault-relative path. Accidental prefixes such as `test/04 Concept Notes/...` should be normalised or fixed.
+
 ## Mathematical wording
 
 When generalising backpropagation equations beyond sigmoid activations, prefer precise wording such as: “The equations are not specific to sigmoid activations; they apply to differentiable elementwise activation functions, with the activation derivative changed accordingly.” Avoid saying they hold for “any activation function.”

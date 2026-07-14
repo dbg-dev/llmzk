@@ -15,6 +15,7 @@ import datetime as dt
 import re
 from pathlib import Path
 from typing import Any
+from collections import defaultdict
 
 import tyro
 import yaml
@@ -60,6 +61,35 @@ def build_fleeting_titles(root: Path) -> dict[str, str]:
     return out
 
 
+def build_title_locations(root: Path) -> dict[str, list[Path]]:
+    out: dict[str, list[Path]] = defaultdict(list)
+    for path in iter_markdown(root):
+        try:
+            rel = path.relative_to(root)
+        except ValueError:
+            continue
+        if rel.parts and rel.parts[0] in {
+            "00 Fleeting Notes", "01 Sources", "02 Literature Notes", "03 Permanent Notes",
+            "04 Concept Notes", "05 Bridge Notes", "06 Contradiction Notes", "07 Index Notes",
+            "08 Wiki Articles",
+        }:
+            out[markdown_note_title(path)].append(rel)
+    return dict(out)
+
+
+def preferred_durable_path(title: str, title_locations: dict[str, list[Path]] | None) -> str | None:
+    if not title_locations:
+        return None
+    locs = title_locations.get(title, [])
+    has_fleeting = any(str(loc).startswith("00 Fleeting Notes/") for loc in locs)
+    durable = [loc for loc in locs if loc.parts and loc.parts[0] != "00 Fleeting Notes"]
+    if not has_fleeting or not durable:
+        return None
+    durable = sorted(durable, key=lambda loc: (0 if str(loc).startswith("04 Concept Notes/") else 1, str(loc)))
+    text = str(durable[0])
+    return text[:-3] if text.endswith(".md") else text
+
+
 def flatten_singletons(value: Any) -> Any:
     """Flatten accidental nested singleton lists from malformed YAML bullets."""
     while isinstance(value, list) and len(value) == 1 and isinstance(value[0], list):
@@ -77,7 +107,7 @@ def split_link_inner(inner: str) -> tuple[str, str | None]:
     return inner.strip(), None
 
 
-def clean_wikilink_text(value: str, *, field: str | None = None, fleeting_titles: dict[str, str] | None = None) -> str:
+def clean_wikilink_text(value: str, *, field: str | None = None, fleeting_titles: dict[str, str] | None = None, title_locations: dict[str, list[Path]] | None = None) -> str:
     value = value.strip().replace(r"\|", "|")
     if value.startswith("[[") and value.endswith("]]" ):
         inner = value[2:-2]
@@ -86,12 +116,17 @@ def clean_wikilink_text(value: str, *, field: str | None = None, fleeting_titles
     target, alias = split_link_inner(inner)
     cleaned_target = clean_target(target, preserve_fleeting_path=(field == "origin_trail"))
 
+    title = cleaned_target.rsplit("/", 1)[-1]
     if field == "origin_trail" and fleeting_titles:
-        title = cleaned_target.rsplit("/", 1)[-1]
         if title in fleeting_titles:
             # If a promoted durable note has the same title as the fleeting source,
             # keep the source path explicit and alias it back to the readable title.
             cleaned_target = fleeting_titles[title]
+            alias = alias or title
+    elif "/" not in cleaned_target:
+        durable_path = preferred_durable_path(title, title_locations)
+        if durable_path:
+            cleaned_target = durable_path
             alias = alias or title
 
     if alias:
@@ -127,7 +162,7 @@ def clean_target(target: str, *, preserve_fleeting_path: bool = False) -> str:
     return target.strip()
 
 
-def normalize_link_list(value: Any, *, field: str | None = None, fleeting_titles: dict[str, str] | None = None) -> list[str]:
+def normalize_link_list(value: Any, *, field: str | None = None, fleeting_titles: dict[str, str] | None = None, title_locations: dict[str, list[Path]] | None = None) -> list[str]:
     value = flatten_singletons(value)
     if value in (None, ""):
         return []
@@ -141,9 +176,9 @@ def normalize_link_list(value: Any, *, field: str | None = None, fleeting_titles
             # If there is still a nested list, add each scalar item.
             for sub in item:
                 if sub not in (None, ""):
-                    out.append(clean_wikilink_text(str(sub), field=field, fleeting_titles=fleeting_titles))
+                    out.append(clean_wikilink_text(str(sub), field=field, fleeting_titles=fleeting_titles, title_locations=title_locations))
         elif item not in (None, ""):
-            out.append(clean_wikilink_text(str(item), field=field, fleeting_titles=fleeting_titles))
+            out.append(clean_wikilink_text(str(item), field=field, fleeting_titles=fleeting_titles, title_locations=title_locations))
     # Preserve order, remove duplicates.
     seen: set[str] = set()
     deduped: list[str] = []
@@ -204,11 +239,11 @@ def dump_yaml_value(lines: list[str], key: str, value: Any, indent: int = 0) -> 
         lines.append(f"{pad}{key}: {format_scalar(value)}")
 
 
-def dump_frontmatter(data: dict[str, Any], *, fleeting_titles: dict[str, str] | None = None) -> str:
+def dump_frontmatter(data: dict[str, Any], *, fleeting_titles: dict[str, str] | None = None, title_locations: dict[str, list[Path]] | None = None) -> str:
     lines: list[str] = []
     for key, value in data.items():
         if key in LINK_LIST_FIELDS:
-            items = normalize_link_list(value, field=key, fleeting_titles=fleeting_titles)
+            items = normalize_link_list(value, field=key, fleeting_titles=fleeting_titles, title_locations=title_locations)
             lines.append(f"{key}:")
             if items:
                 for item in items:
@@ -220,7 +255,7 @@ def dump_frontmatter(data: dict[str, Any], *, fleeting_titles: dict[str, str] | 
     return "\n".join(lines)
 
 
-def fix_text(text: str, *, fleeting_titles: dict[str, str] | None = None) -> tuple[str, bool, str | None]:
+def fix_text(text: str, *, fleeting_titles: dict[str, str] | None = None, title_locations: dict[str, list[Path]] | None = None) -> tuple[str, bool, str | None]:
     fm, body = split_frontmatter(text)
     if fm is None:
         return text, False, None
@@ -233,14 +268,14 @@ def fix_text(text: str, *, fleeting_titles: dict[str, str] | None = None) -> tup
     # Normalize link-list fields explicitly.
     for key in list(data):
         if key in LINK_LIST_FIELDS:
-            data[key] = normalize_link_list(data.get(key), field=key, fleeting_titles=fleeting_titles)
-    new_fm = dump_frontmatter(data, fleeting_titles=fleeting_titles)
+            data[key] = normalize_link_list(data.get(key), field=key, fleeting_titles=fleeting_titles, title_locations=title_locations)
+    new_fm = dump_frontmatter(data, fleeting_titles=fleeting_titles, title_locations=title_locations)
     new_text = f"---\n{new_fm}\n---\n{body}"
     return new_text, new_text != text, None
 
 
 def iter_markdown(root: Path):
-    skip = {".venv", ".git", "__pycache__"}
+    skip = {".venv", ".git", "__pycache__", "__MACOSX"}
     for path in root.rglob("*.md"):
         if any(part in skip for part in path.parts):
             continue
@@ -251,11 +286,12 @@ def run(root: Path, apply: bool = False) -> int:
     """Normalize llmzk frontmatter link-list formatting."""
     root = root.expanduser().resolve()
     fleeting_titles = build_fleeting_titles(root)
+    title_locations = build_title_locations(root)
     changed = 0
     errors = 0
     for path in iter_markdown(root):
         text = path.read_text(encoding="utf-8")
-        new_text, did_change, error = fix_text(text, fleeting_titles=fleeting_titles)
+        new_text, did_change, error = fix_text(text, fleeting_titles=fleeting_titles, title_locations=title_locations)
         if error:
             errors += 1
             print(f"{path}: {error}")

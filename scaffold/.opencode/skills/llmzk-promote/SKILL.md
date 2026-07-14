@@ -35,8 +35,9 @@ In write-approved mode, create or update approved items only:
 9. Do not promote all fleeting notes into concepts.
 10. Do not collapse a technical cluster into one mega-note.
 11. Use `origin_trail` for notes whose provenance is your own fleeting material rather than an external source. Path-qualify origins from `00 Fleeting Notes/`, e.g. `"[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"`, to avoid duplicate-title ambiguity after promotion.
-12. In write-approved mode, write passport and decision log.
-13. Run or recommend frontmatter fix + light audit.
+12. Preserve exact candidate filenames in passports and decision logs. Do not retype abbreviations from memory; for example, keep `JVP`, not `JJP`.
+13. In write-approved mode, write passport and decision log.
+14. Run or recommend frontmatter fix + light audit.
 
 ## Read these references
 

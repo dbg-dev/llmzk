@@ -19,6 +19,27 @@ Use links with context in note bodies:
 - [[Neuron error delta]] — defines the local error signal used by the recurrence.
 ```
 
+## Path-qualified links
+
+Path-qualified wikilinks are allowed when they are vault-relative and point to an existing note:
+
+```markdown
+[[04 Concept Notes/Automatic differentiation|Automatic differentiation]]
+[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]
+```
+
+If a wikilink target contains a slash, it is treated as an exact vault-relative path. Do not include temporary project prefixes such as `test/`, local repo names, or external folder paths:
+
+```markdown
+# Bad
+[[test/04 Concept Notes/Automatic differentiation]]
+
+# Good
+[[04 Concept Notes/Automatic differentiation|Automatic differentiation]]
+```
+
+When a title exists both in `00 Fleeting Notes/` and a durable note folder, path-qualify links from durable notes to the durable target. This avoids Obsidian ambiguity while keeping the alias readable.
+
 ## External links
 
 Use standard Markdown links for external URLs:
@@ -44,7 +65,7 @@ connects:
 ```markdown
 [[Target\|Alias]]
 [[Target.md]]
-[[005-projects/some/path/Target]]
+[[test/04 Concept Notes/Target]]
 ```
 
 Use the normalizer for obvious formatting issues:

@@ -1,6 +1,6 @@
 # llmzk
 
-Current version: v5.3.2
+Current version: v5.3.3
 
 `llmzk` is a lightweight OpenCode + Obsidian harness for building a Zettelkasten with LLM assistance.
 
@@ -146,12 +146,12 @@ scaffold/Templates/               reusable note templates
 ```
 
 
-## v5.3.2 bugfix notes
+## v5.3.3 bugfix notes
 
 This release fixes audit false positives for wikilinks whose titles contain periods such as `w.r.t.`, regenerates Review Queue reports on each audit, and normalises candidate-review status timestamps when reviews are marked applied/rejected/superseded.
 
 
-## v5.3.2 fixes
+## v5.3.3 fixes
 
 - Path-qualified `origin_trail` links for promoted notes from `00 Fleeting Notes/`.
 - Audit warning for duplicate note basenames across fleeting and durable folders.

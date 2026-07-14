@@ -43,8 +43,9 @@ Create approved notes when warranted:
 10. Do not force bridge notes or contradiction/tension notes. It is valid to record `No bridge note warranted` or `No durable contradiction/tension note warranted` in the decision log.
 11. For source notes in `01 Sources/`, use `status: ingested`, not `status: raw`; raw material lives in `00 Inbox/`.
 12. When generalising backpropagation equations beyond sigmoid activations, say “differentiable elementwise activation functions” rather than “any activation function.”
-13. In write-approved mode, write passport and decision log.
-14. Run or recommend a light audit.
+13. Preserve exact candidate filenames in passports and decision logs. Do not retype abbreviations from memory; for example, keep `JVP`, not `JJP`.
+14. In write-approved mode, write passport and decision log.
+15. Run or recommend a light audit.
 
 ## Read these llmzk references
 

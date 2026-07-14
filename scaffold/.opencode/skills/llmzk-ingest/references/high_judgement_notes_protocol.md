@@ -52,7 +52,7 @@ Strong:
 
 - `Weighted input makes neuron error a local chain-rule variable`
 - `Defining error with respect to weighted input makes backpropagation compositional`
-- `Backpropagation is reverse-mode automatic differentiation specialized to layered networks`
+- `Backpropagation is reverse-mode automatic differentiation specialised to layered networks`
 - `A VJP is the linear-algebra form of propagating an adjoint backward`
 - `Dual numbers turn a local derivative rule into a forward-mode computation`
 

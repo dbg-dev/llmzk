@@ -304,7 +304,7 @@ def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = Fal
 
 def doctor(
     vault: Path,
-    /,
+    /,  # Mark the end of positional arguments.
     fail_if_dirty: bool = False,
     quiet_ok: bool = False,
     json: bool = False,

@@ -14,7 +14,7 @@ def test_normalize_links():
     text = "[[Jacobian-Vector Product (JVP)\\|JVP]] and [[04 Concept Notes/Backpropagation.md]]"
     new, changes = normalize_text(text)
     assert "[[Jacobian-Vector Product (JVP)|JVP]]" in new
-    assert "[[Backpropagation]]" in new
+    assert "[[04 Concept Notes/Backpropagation]]" in new
     assert len(changes) == 2
 
 
@@ -92,6 +92,38 @@ def test_audit_wrt_title_not_truncated():
         assert issues["unresolved-links"] == []
 
 
+def test_audit_path_qualified_links_are_exact():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        concept = root / "04 Concept Notes" / "Automatic differentiation.md"
+        concept.parent.mkdir(parents=True)
+        concept.write_text('---\ntype: concept\norigin_trail:\n  - "[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"\n---\n\n# Automatic differentiation\n', encoding="utf-8")
+        source = root / "04 Concept Notes" / "Forward-mode automatic differentiation.md"
+        source.write_text('---\ntype: concept\nconnects:\n  - "[[Automatic differentiation]]"\n---\n\nBroken [[test/04 Concept Notes/Automatic differentiation]].\n', encoding="utf-8")
+        issues = audit(root)
+        assert issues["unresolved-links"], issues
+
+
+def test_normalize_project_prefixed_path_keeps_vault_relative_folder():
+    text = "See [[test/04 Concept Notes/Automatic differentiation.md]]."
+    new, changes = normalize_text(text)
+    assert "[[04 Concept Notes/Automatic differentiation]]" in new
+    assert changes == [("test/04 Concept Notes/Automatic differentiation.md", "04 Concept Notes/Automatic differentiation")]
+
+
+def test_normalize_ambiguous_duplicate_link_prefers_durable_path():
+    locations = {
+        "Automatic differentiation": [
+            Path("00 Fleeting Notes/Automatic differentiation.md"),
+            Path("04 Concept Notes/Automatic differentiation.md"),
+        ]
+    }
+    text = "See [[Automatic differentiation]]."
+    new, changes = normalize_text(text, locations)
+    assert "[[04 Concept Notes/Automatic differentiation]]" in new
+    assert changes == [("Automatic differentiation", "04 Concept Notes/Automatic differentiation")]
+
+
 def test_candidate_review_validate():
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -163,7 +195,7 @@ Body [[04 Concept Notes/Backpropagation.md]].
 """
     new, changes = normalize_text(text)
     assert '[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]' in new
-    assert '[[Backpropagation]]' in new
+    assert '[[04 Concept Notes/Backpropagation]]' in new
     assert len(changes) == 1
 
 
@@ -239,6 +271,9 @@ def main() -> int:
     test_audit_frontmatter_issues()
     test_audit_wrt_title_not_truncated()
     test_audit_duplicate_note_titles()
+    test_audit_path_qualified_links_are_exact()
+    test_normalize_project_prefixed_path_keeps_vault_relative_folder()
+    test_normalize_ambiguous_duplicate_link_prefers_durable_path()
     test_candidate_review_validate()
     test_candidate_review_normalize()
     print("Smoke test passed.")

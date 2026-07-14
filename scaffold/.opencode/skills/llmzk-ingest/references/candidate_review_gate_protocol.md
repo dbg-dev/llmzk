@@ -75,6 +75,10 @@ When a command asks to write approved notes from a candidate review:
 - write passport and decision log
 - mark and normalize the candidate review as applied after successful writes
 
+## Exact filename preservation
+
+When writing passports and decision logs, preserve candidate review paths and filenames exactly. Do not retype technical abbreviations from memory. For example, keep `Jacobian-Vector Product (JVP)`, not `Jacobian-Vector Product (JJP)`.
+
 ## Decision log requirements after write-approved
 
 The decision log should include:

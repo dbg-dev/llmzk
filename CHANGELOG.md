@@ -1,14 +1,24 @@
 # Changelog
 
-## v5.3.2
+## v5.3.3 — path-qualified link audit and duplicate-title cleanup
 
-- Path-qualify `origin_trail` entries from `00 Fleeting Notes/` during frontmatter cleanup.
-- Add `duplicate-note-titles` audit report for fleeting/durable basename collisions.
-- Preserve frontmatter during body link normalization so provenance paths are not stripped.
-- Add candidate-review `normalize` command and run it after `mark` in `/llmzk-write-approved`.
-- Normalize candidate-review booleans and date/timestamp strings consistently.
-- Tighten wording guidance for finite differences vs backpropagation cost.
-- Soften reasoning-model distillation contradiction wording guidance.
+- Fixed audit resolution for path-qualified wikilinks: links with slashes now must resolve as exact vault-relative paths.
+- Added `ambiguous-links` audit report for durable-note links to titles that also exist in `00 Fleeting Notes/`.
+- Updated link normalization to remove accidental project/test prefixes while preserving valid vault-relative folders.
+- Updated link normalization to path-qualify durable links when a title is duplicated between fleeting and durable notes.
+- Added smoke tests for `test/04 Concept Notes/...` path bugs and ambiguous duplicate-title links.
+- Clarified link policy and schema guidance for path-qualified links.
+- Added guidance to avoid `JJP` typo in JVP-related passports/decision logs by preserving exact candidate filenames.
+
+## v5.3.2 — provenance and wording cleanup
+
+- Path-qualified `origin_trail` entries from `00 Fleeting Notes/` during frontmatter cleanup.
+- Added `duplicate-note-titles` audit report for fleeting/durable basename collisions.
+- Preserved frontmatter during body link normalization so provenance paths are not stripped.
+- Added candidate-review `normalize` command and run it after `mark` in `/llmzk-write-approved`.
+- Normalized candidate-review booleans and date/timestamp strings consistently.
+- Tightened wording guidance for finite differences vs backpropagation cost.
+- Softened reasoning-model distillation contradiction wording guidance.
 
 
 ## v5.3.1 — audit and review-gate bugfixes

@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 from collections import defaultdict
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
 import tyro
@@ -25,6 +25,7 @@ CONTENT_ROOTS = {
 }
 RAW_INBOX_ROOT = "00 Inbox"
 DURABLE_ROOTS = CONTENT_ROOTS - {"00 Fleeting Notes"}
+EXACT_PATH_ROOTS = CONTENT_ROOTS | {RAW_INBOX_ROOT, "Logs"}
 
 
 def read(path: Path) -> str:
@@ -71,6 +72,16 @@ def note_stems(root: Path) -> set[str]:
     return set(title_locations(root))
 
 
+def _strip_wikilink_target(raw: str) -> str:
+    target = raw.replace(r"\|", "|")
+    target = target.split("|", 1)[0]
+    target = target.split("#", 1)[0]
+    target = target.strip().strip("/")
+    if target.endswith(".md"):
+        target = target[:-3]
+    return target.strip()
+
+
 def target_stem(target: str) -> str:
     """Return the comparable note title from raw wikilink target text.
 
@@ -78,25 +89,57 @@ def target_stem(target: str) -> str:
     raw wikilink targets, because titles such as ``w.r.t. weighted input``
     would be truncated as if they had a suffix.
     """
-    target = target.replace(r"\|", "|")
-    target = target.split("|", 1)[0]
-    target = target.split("#", 1)[0]
-    target = target.strip().strip("/")
-    if target.endswith(".md"):
-        target = target[:-3]
+    target = _strip_wikilink_target(target)
     if "/" in target:
         target = target.rsplit("/", 1)[-1]
     return target.strip()
 
 
 def raw_target(target: str) -> str:
-    target = target.replace(r"\|", "|")
-    target = target.split("|", 1)[0]
-    target = target.split("#", 1)[0]
-    target = target.strip().strip("/")
-    if target.endswith(".md"):
-        target = target[:-3]
-    return target.strip()
+    return _strip_wikilink_target(target)
+
+
+def is_local_heading_target(raw: str) -> bool:
+    inner = raw.replace(r"\|", "|").split("|", 1)[0].strip()
+    return inner.startswith("#")
+
+
+def is_exact_path_target(raw: str) -> bool:
+    target = raw_target(raw)
+    return "/" in target
+
+
+def exact_target_path(raw: str) -> PurePosixPath | None:
+    """Return a vault-relative Markdown path for a path-qualified wikilink.
+
+    If a wikilink target contains a slash, llmzk treats it as an exact
+    vault-relative path. This intentionally prevents invalid links such as
+    ``[[test/04 Concept Notes/Automatic differentiation]]`` from silently
+    resolving by basename fallback.
+    """
+    target = raw_target(raw)
+    if not target or "/" not in target:
+        return None
+    rel = PurePosixPath(target)
+    if rel.is_absolute() or any(part in {"", ".", ".."} for part in rel.parts):
+        return None
+    if rel.suffix != ".md":
+        rel = PurePosixPath(str(rel) + ".md")
+    if not rel.parts or rel.parts[0] not in EXACT_PATH_ROOTS:
+        return None
+    return rel
+
+
+def wikilink_resolves(root: Path, raw: str, locations: dict[str, list[Path]]) -> bool:
+    if is_local_heading_target(raw):
+        return True
+    exact = exact_target_path(raw)
+    if exact is not None:
+        return (root / Path(*exact.parts)).is_file()
+    if is_exact_path_target(raw):
+        return False
+    title = target_stem(raw)
+    return bool(title and title in locations)
 
 
 def split_frontmatter(text: str) -> tuple[str | None, str]:
@@ -112,6 +155,13 @@ def has_nested_singleton_list(value: Any) -> bool:
             return True
         return any(has_nested_singleton_list(item) for item in value)
     return False
+
+
+def _duplicate_fleeting_and_durable(title: str, locations: dict[str, list[Path]]) -> bool:
+    locs = locations.get(title, [])
+    has_fleeting = any(str(loc).startswith("00 Fleeting Notes/") for loc in locs)
+    has_durable = any(loc.parts and loc.parts[0] in DURABLE_ROOTS for loc in locs)
+    return has_fleeting and has_durable
 
 
 def audit_frontmatter(path: Path, text: str, rel: Path, locations: dict[str, list[Path]]) -> list[str]:
@@ -144,10 +194,7 @@ def audit_frontmatter(path: Path, text: str, rel: Path, locations: dict[str, lis
                     if field == "origin_trail" and item.startswith("[[") and item.endswith("]]" ):
                         target = raw_target(item[2:-2])
                         title = target_stem(item[2:-2])
-                        locs = locations.get(title, [])
-                        has_fleeting = any(str(loc).startswith("00 Fleeting Notes/") for loc in locs)
-                        has_durable = any(loc.parts and loc.parts[0] in DURABLE_ROOTS for loc in locs)
-                        if has_fleeting and has_durable and "/" not in target:
+                        if _duplicate_fleeting_and_durable(title, locations) and "/" not in target:
                             issues.append(
                                 f"{rel}: `origin_trail` should path-qualify fleeting source for duplicate title: {item!r}"
                             )
@@ -168,12 +215,23 @@ def duplicate_title_issues(locations: dict[str, list[Path]]) -> list[str]:
     return issues
 
 
+def ambiguous_link_issue(rel: Path, raw: str, locations: dict[str, list[Path]]) -> str | None:
+    """Warn when a durable note links by basename to a duplicate fleeting/durable title."""
+    target = raw_target(raw)
+    if "/" in target:
+        return None
+    title = target_stem(raw)
+    if not _duplicate_fleeting_and_durable(title, locations):
+        return None
+    return f"{rel}: [[{raw}]] should be path-qualified because title also exists in 00 Fleeting Notes"
+
+
 def audit(root: Path) -> dict[str, list[str]]:
     locations = title_locations(root)
-    stems = set(locations)
     issues: dict[str, list[str]] = {
         "bad-link-formatting": [],
         "unresolved-links": [],
+        "ambiguous-links": [],
         "raw-inbox-unresolved-links": [],
         "math-formatting": [],
         "frontmatter-issues": [],
@@ -190,9 +248,12 @@ def audit(root: Path) -> dict[str, list[str]]:
             raw = m.group(1)
             if r"\|" in raw or raw.endswith(".md") or raw.startswith("/"):
                 issues["bad-link-formatting"].append(f"{rel}: [[{raw}]]")
-            stem = target_stem(raw)
-            if stem and stem not in stems:
+            if not wikilink_resolves(root, raw, locations):
                 issues["unresolved-links"].append(f"{rel}: [[{raw}]]")
+            if rel.parts and rel.parts[0] in DURABLE_ROOTS:
+                issue = ambiguous_link_issue(rel, raw, locations)
+                if issue:
+                    issues["ambiguous-links"].append(issue)
         for lang, body in CODE_FENCE_RE.findall(text):
             lang = (lang or "").lower()
             if lang in {"", "text", "markdown", "latex"} and any(h in body for h in MATH_HINTS):
@@ -214,8 +275,7 @@ def audit(root: Path) -> dict[str, list[str]]:
         rel = path.relative_to(root)
         for m in WIKILINK_RE.finditer(text):
             raw = m.group(1)
-            stem = target_stem(raw)
-            if stem and stem not in stems:
+            if not wikilink_resolves(root, raw, locations):
                 issues["raw-inbox-unresolved-links"].append(f"{rel}: [[{raw}]]")
 
     return issues
