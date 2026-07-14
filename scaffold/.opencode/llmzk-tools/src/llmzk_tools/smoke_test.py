@@ -7,7 +7,7 @@ from pathlib import Path
 from llmzk_tools.normalize_links import normalize_text
 from llmzk_tools.audit import audit
 from llmzk_tools.fix_frontmatter import fix_text
-from llmzk_tools.review import validate_review
+from llmzk_tools.review import Normalize, run_normalize, validate_review
 
 
 def test_normalize_links():
@@ -153,14 +153,94 @@ None.
         assert code == 0, findings
 
 
+def test_normalize_links_preserves_frontmatter_paths():
+    text = """---
+origin_trail:
+  - "[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"
+---
+
+Body [[04 Concept Notes/Backpropagation.md]].
+"""
+    new, changes = normalize_text(text)
+    assert '[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]' in new
+    assert '[[Backpropagation]]' in new
+    assert len(changes) == 1
+
+
+def test_fix_frontmatter_path_qualifies_origin_trail():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        fleeting = root / "00 Fleeting Notes" / "Automatic differentiation.md"
+        concept = root / "04 Concept Notes" / "Automatic differentiation.md"
+        fleeting.parent.mkdir(parents=True)
+        concept.parent.mkdir(parents=True)
+        fleeting.write_text("# Automatic differentiation\n", encoding="utf-8")
+        text = """---
+type: concept
+origin_trail:
+  - "[[Automatic differentiation]]"
+---
+
+# Automatic differentiation
+"""
+        new, changed, error = fix_text(text, fleeting_titles={"Automatic differentiation": "00 Fleeting Notes/Automatic differentiation"})
+        assert error is None
+        assert changed
+        assert '"[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"' in new
+
+
+def test_audit_duplicate_note_titles():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        fleeting = root / "00 Fleeting Notes" / "Automatic differentiation.md"
+        concept = root / "04 Concept Notes" / "Automatic differentiation.md"
+        fleeting.parent.mkdir(parents=True)
+        concept.parent.mkdir(parents=True)
+        fleeting.write_text("# Automatic differentiation\n", encoding="utf-8")
+        concept.write_text('---\ntype: concept\norigin_trail:\n  - "[[Automatic differentiation]]"\n---\n\n# Automatic differentiation\n', encoding="utf-8")
+        issues = audit(root)
+        assert issues["duplicate-note-titles"]
+        assert issues["frontmatter-issues"]
+
+
+def test_candidate_review_normalize():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        p = root / "review.md"
+        p.write_text("""---
+type: candidate_review
+status: applied
+mode: ingest
+input:
+  - 00 Inbox/example.md
+created: 2026-07-13
+applied: True
+schema_version: 1
+modified: 2026-07-13 13:53:59+01:00
+---
+
+# Candidate Review - Example
+""", encoding="utf-8")
+        run_normalize(Normalize(review_file=p))
+        text = p.read_text(encoding="utf-8")
+        assert "applied: true" in text
+        assert 'created: "2026-07-13"' in text
+        assert 'modified: "2026-07-13T13:53:59+01:00"' in text
+        assert '- "00 Inbox/example.md"' in text
+
+
 def main() -> int:
     test_normalize_links()
     test_normalize_ignores_code_fences()
+    test_normalize_links_preserves_frontmatter_paths()
     test_audit_math_fence()
     test_fix_frontmatter_nested_lists()
+    test_fix_frontmatter_path_qualifies_origin_trail()
     test_audit_frontmatter_issues()
     test_audit_wrt_title_not_truncated()
+    test_audit_duplicate_note_titles()
     test_candidate_review_validate()
+    test_candidate_review_normalize()
     print("Smoke test passed.")
     return 0
 

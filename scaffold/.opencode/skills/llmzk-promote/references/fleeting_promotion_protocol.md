@@ -23,6 +23,17 @@ For bridge and contradiction/tension candidates, apply `../llmzk-ingest/referenc
 - `This notation is ugly` → usually a decision-log observation, not a contradiction note.
 - `Finite differences are intuitive but scale poorly with parameter count` → contradiction/tension note if the trade-off is central.
 
+## Provenance for promoted notes
+
+Promoted notes should use `origin_trail`, not an empty `source_trail`. When the origin is a note in `00 Fleeting Notes/`, path-qualify the wikilink and alias it back to the readable title:
+
+```yaml
+origin_trail:
+  - "[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"
+```
+
+Do not use ambiguous origin trails such as `"[[Automatic differentiation]]"` when the promoted concept or permanent note has the same basename.
+
 
 ## Candidate review gate
 

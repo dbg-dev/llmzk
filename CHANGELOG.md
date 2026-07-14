@@ -1,5 +1,16 @@
 # Changelog
 
+## v5.3.2
+
+- Path-qualify `origin_trail` entries from `00 Fleeting Notes/` during frontmatter cleanup.
+- Add `duplicate-note-titles` audit report for fleeting/durable basename collisions.
+- Preserve frontmatter during body link normalization so provenance paths are not stripped.
+- Add candidate-review `normalize` command and run it after `mark` in `/llmzk-write-approved`.
+- Normalize candidate-review booleans and date/timestamp strings consistently.
+- Tighten wording guidance for finite differences vs backpropagation cost.
+- Soften reasoning-model distillation contradiction wording guidance.
+
+
 ## v5.3.1 — audit and review-gate bugfixes
 
 - Fixed unresolved-link false positives for note titles containing periods such as `w.r.t.`.

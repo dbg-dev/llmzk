@@ -34,7 +34,7 @@ In write-approved mode, create or update approved items only:
 8. Do not force bridge notes or contradiction/tension notes. It is valid to record `No bridge note warranted` or `No durable contradiction/tension note warranted` in the decision log.
 9. Do not promote all fleeting notes into concepts.
 10. Do not collapse a technical cluster into one mega-note.
-11. Use `origin_trail` for notes whose provenance is your own fleeting material rather than an external source.
+11. Use `origin_trail` for notes whose provenance is your own fleeting material rather than an external source. Path-qualify origins from `00 Fleeting Notes/`, e.g. `"[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"`, to avoid duplicate-title ambiguity after promotion.
 12. In write-approved mode, write passport and decision log.
 13. Run or recommend frontmatter fix + light audit.
 

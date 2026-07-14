@@ -26,17 +26,25 @@ bridge
 contradiction
 index
 wiki-article
+candidate_review
 ```
 
 Common `status` values:
 
 ```text
-raw
 seed
 active
 reviewed
 synthesized
 archived
+ingested
+partial
+deprecated
+proposed
+edited
+applied
+rejected
+superseded
 ```
 
 ## Provenance fields
@@ -48,12 +56,14 @@ source_trail:
   - "[[Source - Example]]"
 ```
 
-For notes promoted from your own fleeting notes:
+For notes promoted from your own fleeting notes, path-qualify the origin and use an alias:
 
 ```yaml
 origin_trail:
-  - "[[Fleeting note title]]"
+  - "[[00 Fleeting Notes/Fleeting note title|Fleeting note title]]"
 ```
+
+This avoids ambiguous provenance when a durable note has the same basename as the fleeting note.
 
 For bridge and contradiction notes:
 
@@ -77,6 +87,7 @@ derived_from:
 - Use flat lists only.
 - Do not create nested list artifacts such as `- - - Note title`.
 - Use `origin_trail` rather than empty `source_trail` for promoted fleeting notes.
+- Path-qualify `origin_trail` entries from `00 Fleeting Notes/`, for example `"[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"`.
 - If no provenance is available, say so in the decision log rather than inventing it.
 
 ## Repair command

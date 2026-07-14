@@ -65,9 +65,17 @@ class Mark:
     status: Literal["applied", "rejected", "superseded"] = "applied"
 
 
+@dataclass
+class Normalize:
+    """Normalize candidate review frontmatter without changing review body."""
+
+    review_file: Path
+
+
 Command = Union[
     Annotated[Validate, tyro.conf.subcommand(name="validate")],
     Annotated[Mark, tyro.conf.subcommand(name="mark")],
+    Annotated[Normalize, tyro.conf.subcommand(name="normalize")],
 ]
 
 
@@ -84,7 +92,9 @@ def split_frontmatter(text: str) -> tuple[dict, str, str | None]:
 
 
 def normalize_frontmatter_value(value):
-    if isinstance(value, (dt.datetime, dt.date)):
+    if isinstance(value, dt.datetime):
+        return value.isoformat(timespec="seconds")
+    if isinstance(value, dt.date):
         return value.isoformat()
     if isinstance(value, list):
         return [normalize_frontmatter_value(item) for item in value]
@@ -94,16 +104,65 @@ def normalize_frontmatter_value(value):
 
 
 def normalize_frontmatter_data(data: dict) -> dict:
-    return {key: normalize_frontmatter_value(value) for key, value in data.items()}
+    normalized = {key: normalize_frontmatter_value(value) for key, value in data.items()}
+    if normalized.get("type") == "candidate_review":
+        # Keep booleans as booleans; custom dumper below renders lowercase YAML.
+        if isinstance(normalized.get("applied"), str):
+            lowered = normalized["applied"].strip().lower()
+            if lowered in {"true", "false"}:
+                normalized["applied"] = lowered == "true"
+    return normalized
 
 
 def now_iso() -> str:
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def quote_yaml_string(value: str) -> str:
+    return '"' + value.replace('"', '\"') + '"'
+
+
+def is_date_like(value: str) -> bool:
+    return bool(re.match(r"^\d{4}-\d{2}-\d{2}(?:T|$)", value))
+
+
+def format_scalar(value) -> str:
+    value = normalize_frontmatter_value(value)
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        if is_date_like(value) or ":" in value or "#" in value or "[" in value or "]" in value or "/" in value:
+            return quote_yaml_string(value)
+        return value
+    return str(value)
+
+
+def dump_yaml_value(lines: list[str], key: str, value, indent: int = 0) -> None:
+    pad = " " * indent
+    value = normalize_frontmatter_value(value)
+    if isinstance(value, dict):
+        lines.append(f"{pad}{key}:")
+        for child_key, child_value in value.items():
+            dump_yaml_value(lines, str(child_key), child_value, indent + 2)
+    elif isinstance(value, list):
+        if not value:
+            lines.append(f"{pad}{key}: []")
+        else:
+            lines.append(f"{pad}{key}:")
+            for item in value:
+                lines.append(f"{pad}  - {format_scalar(item)}")
+    else:
+        lines.append(f"{pad}{key}: {format_scalar(value)}")
+
+
 def dump_frontmatter(data: dict, body: str) -> str:
     normalized = normalize_frontmatter_data(data)
-    raw = yaml.safe_dump(normalized, sort_keys=False, allow_unicode=True).strip()
+    lines: list[str] = []
+    for key, value in normalized.items():
+        dump_yaml_value(lines, str(key), value)
+    raw = "\n".join(lines)
     return f"---\n{raw}\n---\n{body if body.startswith(chr(10)) else chr(10) + body}"
 
 
@@ -234,12 +293,30 @@ def run_mark(args: Mark) -> int:
     return 0
 
 
+
+def run_normalize(args: Normalize) -> int:
+    path = args.review_file.expanduser()
+    if not path.exists():
+        raise SystemExit(f"Candidate review not found: {path}")
+    text = path.read_text(encoding="utf-8")
+    data, body, raw_frontmatter = split_frontmatter(text)
+    if raw_frontmatter is None:
+        raise SystemExit("Cannot normalize review: missing YAML frontmatter")
+    if data.get("type") != "candidate_review":
+        raise SystemExit("Cannot normalize review: frontmatter type must be candidate_review")
+    new_text = dump_frontmatter(data, body)
+    path.write_text(new_text, encoding="utf-8")
+    print(f"Normalized candidate review frontmatter: {path}")
+    return 0
+
 def main() -> int:
     command = tyro.cli(Command)
     if isinstance(command, Validate):
         return run_validate(command)
     if isinstance(command, Mark):
         return run_mark(command)
+    if isinstance(command, Normalize):
+        return run_normalize(command)
     raise AssertionError(f"Unhandled command: {command!r}")
 
 

@@ -130,3 +130,10 @@ Strong titles:
 ## Mathematical precision guardrails
 
 When creating a contradiction/tension note about finite differences versus backpropagation, do not say the finite-difference method is “exponentially worse”. The cost difference is tied to parameter count: finite differences require extra forward evaluations proportional to the number of parameters, while backpropagation computes all gradients with one backward pass. Use “orders of magnitude more expensive” or “worse by a factor proportional to the number of parameters” when that is the intended claim.
+
+
+## Mathematical/computational wording guardrails
+
+- Do not describe finite differences as exponentially worse than backpropagation. Prefer: “finite differences require one extra forward pass per parameter; backpropagation computes all partial derivatives with one backward pass through the existing computation graph.”
+- Do not say backpropagation cost is independent of parameter count. Prefer: “its cost is comparable to a small constant multiple of the forward pass, rather than being multiplied by the number of parameters.”
+- For reasoning-model distillation tensions, avoid absolute wording such as “distillation cannot produce the next generation of reasoning models.” Prefer: “distillation propagates reasoning capability rather than creating frontier capability” or “distillation depends on stronger teacher models.”

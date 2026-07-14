@@ -26,3 +26,8 @@ Do not create weak bridges merely because concepts connect to another topic. Put
 Do not create weak contradiction notes merely because the topic is difficult. Contradiction/tension notes should preserve a real trade-off, disagreement, limitation, ambiguity, or apparent conflict.
 
 Do not create one mega-note called `Automatic differentiation` that contains all details about JVP, VJP, dual numbers, pullbacks, and reverse mode.
+
+
+## Provenance hygiene
+
+When a cluster promotion creates durable notes with the same basename as fleeting notes, use path-qualified `origin_trail` entries such as `"[[00 Fleeting Notes/Jacobian-Vector Product (JVP)|Jacobian-Vector Product (JVP)]]"`. This avoids Obsidian resolving provenance to the new durable note instead of the original fleeting note.

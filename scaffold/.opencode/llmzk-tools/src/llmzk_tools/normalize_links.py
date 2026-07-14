@@ -42,12 +42,34 @@ def _clean_path(target: str) -> str:
     return target
 
 
+def split_frontmatter(text: str) -> tuple[str, str]:
+    """Split YAML frontmatter from body, preserving the frontmatter text.
+
+    Wikilinks in frontmatter are handled by `llmzk fix-frontmatter`. The body
+    link normalizer deliberately leaves frontmatter untouched so provenance links
+    such as `[[00 Fleeting Notes/Example|Example]]` are not stripped back to an
+    ambiguous basename.
+    """
+    if not text.startswith("---\n"):
+        return "", text
+    end = text.find("\n---", 4)
+    if end < 0:
+        return "", text
+    close_end = end + len("\n---")
+    if close_end < len(text) and text[close_end:close_end + 1] == "\n":
+        close_end += 1
+    return text[:close_end], text[close_end:]
+
+
 def normalize_text(text: str) -> tuple[str, list[tuple[str, str]]]:
-    """Normalize wikilinks outside fenced code blocks.
+    """Normalize wikilinks outside frontmatter and fenced code blocks.
 
     Documentation often contains examples of bad links. Do not rewrite code-fenced
-    examples because those examples are intentionally literal.
+    examples because those examples are intentionally literal. Do not rewrite
+    YAML frontmatter because llmzk-specific provenance fields need field-aware
+    handling.
     """
+    frontmatter, body = split_frontmatter(text)
     changes: list[tuple[str, str]] = []
 
     def repl(match: re.Match[str]) -> str:
@@ -60,7 +82,7 @@ def normalize_text(text: str) -> tuple[str, list[tuple[str, str]]]:
     out: list[str] = []
     in_fence = False
     fence_marker = ""
-    for line in text.splitlines(keepends=True):
+    for line in body.splitlines(keepends=True):
         stripped = line.lstrip()
         if stripped.startswith("```") or stripped.startswith("~~~"):
             marker = stripped[:3]
@@ -76,7 +98,7 @@ def normalize_text(text: str) -> tuple[str, list[tuple[str, str]]]:
             out.append(line)
         else:
             out.append(WIKILINK_RE.sub(repl, line))
-    return "".join(out), changes
+    return frontmatter + "".join(out), changes
 
 
 def iter_markdown(root: Path):

@@ -4,17 +4,19 @@
 This script is intentionally conservative. It fixes:
 - nested YAML lists such as `- - - Source` in link-list fields;
 - bare note names in link-list fields by converting them to quoted wikilinks;
-- escaped Obsidian pipe aliases in frontmatter wikilinks.
+- escaped Obsidian pipe aliases in frontmatter wikilinks;
+- ambiguous `origin_trail` references to fleeting notes when a durable note has the same title.
 
 It does not rewrite the body of the note.
 """
 from __future__ import annotations
 
-import tyro
+import datetime as dt
 import re
 from pathlib import Path
 from typing import Any
 
+import tyro
 import yaml
 
 LINK_LIST_FIELDS = {
@@ -27,7 +29,12 @@ LINK_LIST_FIELDS = {
 }
 
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n?", re.DOTALL)
-WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
+CONTENT_FOLDERS = [
+    "00 Inbox/", "00 Fleeting Notes/", "01 Sources/", "02 Literature Notes/",
+    "03 Permanent Notes/", "04 Concept Notes/", "05 Bridge Notes/",
+    "06 Contradiction Notes/", "07 Index Notes/", "08 Wiki Articles/", "09 Media/",
+    "Logs/Passports/", "Logs/Decision Logs/", "Logs/Review Queue/", "Logs/Candidate Reviews/",
+]
 
 
 def split_frontmatter(text: str) -> tuple[str | None, str]:
@@ -35,6 +42,22 @@ def split_frontmatter(text: str) -> tuple[str | None, str]:
     if not match:
         return None, text
     return match.group(1), text[match.end():]
+
+
+def markdown_note_title(path: Path) -> str:
+    name = path.name
+    return name[:-3] if name.endswith(".md") else name
+
+
+def build_fleeting_titles(root: Path) -> dict[str, str]:
+    folder = root / "00 Fleeting Notes"
+    if not folder.exists():
+        return {}
+    out: dict[str, str] = {}
+    for path in folder.glob("*.md"):
+        title = markdown_note_title(path)
+        out[title] = f"00 Fleeting Notes/{title}"
+    return out
 
 
 def flatten_singletons(value: Any) -> Any:
@@ -46,37 +69,55 @@ def flatten_singletons(value: Any) -> Any:
     return value
 
 
-def clean_wikilink_text(value: str) -> str:
-    value = value.strip()
-    value = value.replace(r"\|", "|")
-    if value.startswith("[[") and value.endswith("]]"):
+def split_link_inner(inner: str) -> tuple[str, str | None]:
+    inner = inner.strip().replace(r"\|", "|")
+    if "|" in inner:
+        target, alias = inner.split("|", 1)
+        return target.strip(), alias.strip()
+    return inner.strip(), None
+
+
+def clean_wikilink_text(value: str, *, field: str | None = None, fleeting_titles: dict[str, str] | None = None) -> str:
+    value = value.strip().replace(r"\|", "|")
+    if value.startswith("[[") and value.endswith("]]" ):
         inner = value[2:-2]
     else:
         inner = value
-    # Remove .md suffix from target side, preserving aliases/headings.
-    if "|" in inner:
-        target, alias = inner.split("|", 1)
-        inner = f"{clean_target(target)}|{alias.strip()}"
-    else:
-        inner = clean_target(inner)
-    return f"[[{inner}]]"
+    target, alias = split_link_inner(inner)
+    cleaned_target = clean_target(target, preserve_fleeting_path=(field == "origin_trail"))
+
+    if field == "origin_trail" and fleeting_titles:
+        title = cleaned_target.rsplit("/", 1)[-1]
+        if title in fleeting_titles:
+            # If a promoted durable note has the same title as the fleeting source,
+            # keep the source path explicit and alias it back to the readable title.
+            cleaned_target = fleeting_titles[title]
+            alias = alias or title
+
+    if alias:
+        return f"[[{cleaned_target}|{alias}]]"
+    return f"[[{cleaned_target}]]"
 
 
-def clean_target(target: str) -> str:
+def clean_target(target: str, *, preserve_fleeting_path: bool = False) -> str:
     target = target.strip()
     if "#" in target:
         note, heading = target.split("#", 1)
-        note = clean_target(note)
+        note = clean_target(note, preserve_fleeting_path=preserve_fleeting_path)
         return f"{note}#{heading.strip()}"
     if target.endswith(".md"):
         target = target[:-3]
-    # Strip project-prefixed vault paths from common folders.
-    folders = [
-        "00 Inbox/", "00 Fleeting Notes/", "01 Sources/", "02 Literature Notes/",
-        "03 Permanent Notes/", "04 Concept Notes/", "05 Bridge Notes/",
-        "06 Contradiction Notes/", "07 Index Notes/", "08 Wiki Articles/", "09 Media/", "Logs/Passports/", "Logs/Decision Logs/", "Logs/Review Queue/",
-    ]
-    for folder in folders:
+
+    # Preserve explicit fleeting paths in origin_trail so provenance links do not
+    # become ambiguous when a durable note has the same basename.
+    if preserve_fleeting_path:
+        idx = target.find("00 Fleeting Notes/")
+        if idx >= 0:
+            kept = target[idx:]
+            return kept[:-3] if kept.endswith(".md") else kept
+
+    # Strip project-prefixed vault paths from common folders for ordinary links.
+    for folder in CONTENT_FOLDERS:
         idx = target.find(folder)
         if idx >= 0:
             target = target[idx + len(folder):]
@@ -86,7 +127,7 @@ def clean_target(target: str) -> str:
     return target.strip()
 
 
-def normalize_link_list(value: Any) -> list[str]:
+def normalize_link_list(value: Any, *, field: str | None = None, fleeting_titles: dict[str, str] | None = None) -> list[str]:
     value = flatten_singletons(value)
     if value in (None, ""):
         return []
@@ -100,9 +141,9 @@ def normalize_link_list(value: Any) -> list[str]:
             # If there is still a nested list, add each scalar item.
             for sub in item:
                 if sub not in (None, ""):
-                    out.append(clean_wikilink_text(str(sub)))
+                    out.append(clean_wikilink_text(str(sub), field=field, fleeting_titles=fleeting_titles))
         elif item not in (None, ""):
-            out.append(clean_wikilink_text(str(item)))
+            out.append(clean_wikilink_text(str(item), field=field, fleeting_titles=fleeting_titles))
     # Preserve order, remove duplicates.
     seen: set[str] = set()
     deduped: list[str] = []
@@ -118,14 +159,24 @@ def quote_yaml_string(s: str) -> str:
     return f'"{escaped}"'
 
 
+def is_date_like(value: str) -> bool:
+    return bool(re.match(r"^\d{4}-\d{2}-\d{2}(?:T|$|\s)", value))
+
+
 def format_scalar(value: Any) -> str:
+    if isinstance(value, dt.datetime):
+        value = value.isoformat(timespec="seconds")
+    elif isinstance(value, dt.date):
+        value = value.isoformat()
     if isinstance(value, str):
         value = value.replace(r"\|", "|")
-        if "[[" in value or ":" in value or "#" in value or "|" in value:
+        if "[[" in value or ":" in value or "#" in value or "|" in value or "/" in value or is_date_like(value):
             return quote_yaml_string(value)
         return value
     if value is None:
         return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
     return str(value)
 
 
@@ -153,11 +204,11 @@ def dump_yaml_value(lines: list[str], key: str, value: Any, indent: int = 0) -> 
         lines.append(f"{pad}{key}: {format_scalar(value)}")
 
 
-def dump_frontmatter(data: dict[str, Any]) -> str:
+def dump_frontmatter(data: dict[str, Any], *, fleeting_titles: dict[str, str] | None = None) -> str:
     lines: list[str] = []
     for key, value in data.items():
         if key in LINK_LIST_FIELDS:
-            items = normalize_link_list(value)
+            items = normalize_link_list(value, field=key, fleeting_titles=fleeting_titles)
             lines.append(f"{key}:")
             if items:
                 for item in items:
@@ -169,7 +220,7 @@ def dump_frontmatter(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def fix_text(text: str) -> tuple[str, bool, str | None]:
+def fix_text(text: str, *, fleeting_titles: dict[str, str] | None = None) -> tuple[str, bool, str | None]:
     fm, body = split_frontmatter(text)
     if fm is None:
         return text, False, None
@@ -182,8 +233,8 @@ def fix_text(text: str) -> tuple[str, bool, str | None]:
     # Normalize link-list fields explicitly.
     for key in list(data):
         if key in LINK_LIST_FIELDS:
-            data[key] = normalize_link_list(data.get(key))
-    new_fm = dump_frontmatter(data)
+            data[key] = normalize_link_list(data.get(key), field=key, fleeting_titles=fleeting_titles)
+    new_fm = dump_frontmatter(data, fleeting_titles=fleeting_titles)
     new_text = f"---\n{new_fm}\n---\n{body}"
     return new_text, new_text != text, None
 
@@ -198,11 +249,13 @@ def iter_markdown(root: Path):
 
 def run(root: Path, apply: bool = False) -> int:
     """Normalize llmzk frontmatter link-list formatting."""
+    root = root.expanduser().resolve()
+    fleeting_titles = build_fleeting_titles(root)
     changed = 0
     errors = 0
     for path in iter_markdown(root):
         text = path.read_text(encoding="utf-8")
-        new_text, did_change, error = fix_text(text)
+        new_text, did_change, error = fix_text(text, fleeting_titles=fleeting_titles)
         if error:
             errors += 1
             print(f"{path}: {error}")

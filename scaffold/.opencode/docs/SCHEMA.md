@@ -19,12 +19,14 @@ source_trail:
   - "[[Source - Example]]"
 ```
 
-Use `origin_trail` for promoted fleeting notes or internal notes:
+Use `origin_trail` for promoted fleeting notes or internal notes. When the origin is in `00 Fleeting Notes/`, path-qualify it and use an alias so provenance does not become ambiguous if the promoted durable note has the same title:
 
 ```yaml
 origin_trail:
-  - "[[Automatic differentiation]]"
+  - "[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"
 ```
+
+Avoid ambiguous origin trails such as `"[[Automatic differentiation]]"` when both a fleeting note and durable concept/permanent note share that basename.
 
 Use `connects` for bridge and contradiction notes:
 
@@ -62,7 +64,9 @@ Do not use `status: raw` for processed source notes in `01 Sources/`; raw materi
 
 When generalising backpropagation equations beyond sigmoid activations, prefer precise wording such as: “The equations are not specific to sigmoid activations; they apply to differentiable elementwise activation functions, with the activation derivative changed accordingly.” Avoid saying they hold for “any activation function.”
 
-When comparing finite differences with backpropagation, do not describe backpropagation as “exponentially” cheaper. Prefer: “finite differences require work proportional to the number of parameters, while backpropagation computes all gradients with one backward pass.”
+When comparing finite differences with backpropagation, do not describe backpropagation as “exponentially” cheaper or say that backpropagation cost is independent of parameter count. Prefer: “finite differences require work proportional to the number of parameters, while backpropagation computes all gradients with one backward pass through the existing computation graph.”
+
+When describing distillation in reasoning models, avoid overly absolute titles such as “distillation cannot produce the next generation of reasoning models.” Prefer: “distillation propagates reasoning capability rather than creating frontier capability” or “distillation is cheap and effective for small models but depends on stronger teacher models.”
 
 
 ## Candidate review frontmatter
@@ -75,7 +79,7 @@ status: proposed # proposed | edited | applied | rejected | superseded
 mode: ingest # ingest | promote
 input:
   - "00 Inbox/example.md"
-created: YYYY-MM-DD
+created: "YYYY-MM-DD"
 applied: false
 schema_version: 1
 ```

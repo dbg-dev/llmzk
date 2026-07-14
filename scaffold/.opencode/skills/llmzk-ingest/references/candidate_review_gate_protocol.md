@@ -37,7 +37,7 @@ status: proposed
 mode: ingest # or promote
 input:
   - "00 Inbox/example.md"
-created: YYYY-MM-DD
+created: "YYYY-MM-DD"
 applied: false
 schema_version: 1
 ```
@@ -73,7 +73,7 @@ When a command asks to write approved notes from a candidate review:
 - consider extra `[x]` candidates added by the reviewer
 - follow `## Reviewer notes`
 - write passport and decision log
-- mark the candidate review as applied after successful writes
+- mark and normalize the candidate review as applied after successful writes
 
 ## Decision log requirements after write-approved
 

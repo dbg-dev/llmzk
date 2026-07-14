@@ -11,7 +11,7 @@ Commands:
   fix-frontmatter       Normalize frontmatter link-list fields
   normalize-links       Normalize wikilinks outside code fences
   new-run               Create passport and decision-log placeholders
-  review                Validate or mark candidate reviews
+  review                Validate, mark, or normalize candidate reviews
   review-validate       Validate a candidate review file
   smoke-test            Run deterministic tool smoke tests
   git <subcommand>      Run Git safety subcommands
@@ -23,6 +23,7 @@ Examples:
   .opencode/bin/llmzk git preflight .
   .opencode/bin/llmzk git diff . --stat
   .opencode/bin/llmzk review validate Logs/Candidate\ Reviews/example.md
+  .opencode/bin/llmzk review normalize Logs/Candidate\ Reviews/example.md
 USAGE
 }
 

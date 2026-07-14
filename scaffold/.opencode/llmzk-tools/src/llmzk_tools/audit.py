@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import datetime as dt
-import tyro
 import re
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable
 
+import tyro
 import yaml
 
 WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
@@ -23,6 +24,7 @@ CONTENT_ROOTS = {
     "08 Wiki Articles",
 }
 RAW_INBOX_ROOT = "00 Inbox"
+DURABLE_ROOTS = CONTENT_ROOTS - {"00 Fleeting Notes"}
 
 
 def read(path: Path) -> str:
@@ -58,8 +60,15 @@ def markdown_note_title(path: Path) -> str:
     return name[:-3] if name.endswith(".md") else name
 
 
+def title_locations(root: Path) -> dict[str, list[Path]]:
+    locations: dict[str, list[Path]] = defaultdict(list)
+    for p in iter_md(root, include_inbox=False):
+        locations[markdown_note_title(p)].append(p.relative_to(root))
+    return dict(locations)
+
+
 def note_stems(root: Path) -> set[str]:
-    return {markdown_note_title(p) for p in iter_md(root, include_inbox=False)}
+    return set(title_locations(root))
 
 
 def target_stem(target: str) -> str:
@@ -80,6 +89,16 @@ def target_stem(target: str) -> str:
     return target.strip()
 
 
+def raw_target(target: str) -> str:
+    target = target.replace(r"\|", "|")
+    target = target.split("|", 1)[0]
+    target = target.split("#", 1)[0]
+    target = target.strip().strip("/")
+    if target.endswith(".md"):
+        target = target[:-3]
+    return target.strip()
+
+
 def split_frontmatter(text: str) -> tuple[str | None, str]:
     match = FRONTMATTER_RE.match(text)
     if not match:
@@ -95,7 +114,7 @@ def has_nested_singleton_list(value: Any) -> bool:
     return False
 
 
-def audit_frontmatter(path: Path, text: str, rel: Path) -> list[str]:
+def audit_frontmatter(path: Path, text: str, rel: Path, locations: dict[str, list[Path]]) -> list[str]:
     fm, _ = split_frontmatter(text)
     if fm is None:
         return []
@@ -111,7 +130,7 @@ def audit_frontmatter(path: Path, text: str, rel: Path) -> list[str]:
             continue
         value = data[field]
         if has_nested_singleton_list(value):
-            issues.append(f"{rel}: `{field}` has nested list formatting; run llmzk_fix_frontmatter.py")
+            issues.append(f"{rel}: `{field}` has nested list formatting; run llmzk fix-frontmatter")
         if value not in (None, ""):
             items = value if isinstance(value, list) else [value]
             for item in items:
@@ -122,11 +141,36 @@ def audit_frontmatter(path: Path, text: str, rel: Path) -> list[str]:
                         issues.append(f"{rel}: `{field}` item should be quoted wikilink: {item!r}")
                     if r"\|" in item:
                         issues.append(f"{rel}: `{field}` contains escaped pipe: {item!r}")
+                    if field == "origin_trail" and item.startswith("[[") and item.endswith("]]" ):
+                        target = raw_target(item[2:-2])
+                        title = target_stem(item[2:-2])
+                        locs = locations.get(title, [])
+                        has_fleeting = any(str(loc).startswith("00 Fleeting Notes/") for loc in locs)
+                        has_durable = any(loc.parts and loc.parts[0] in DURABLE_ROOTS for loc in locs)
+                        if has_fleeting and has_durable and "/" not in target:
+                            issues.append(
+                                f"{rel}: `origin_trail` should path-qualify fleeting source for duplicate title: {item!r}"
+                            )
+    return issues
+
+
+def duplicate_title_issues(locations: dict[str, list[Path]]) -> list[str]:
+    issues: list[str] = []
+    for title, locs in sorted(locations.items()):
+        if len(locs) <= 1:
+            continue
+        has_fleeting = any(str(loc).startswith("00 Fleeting Notes/") for loc in locs)
+        has_durable = any(loc.parts and loc.parts[0] in DURABLE_ROOTS for loc in locs)
+        if not (has_fleeting and has_durable):
+            continue
+        rendered = "; ".join(str(loc) for loc in sorted(locs))
+        issues.append(f"{title}: duplicate title across fleeting and durable notes -> {rendered}")
     return issues
 
 
 def audit(root: Path) -> dict[str, list[str]]:
-    stems = note_stems(root)
+    locations = title_locations(root)
+    stems = set(locations)
     issues: dict[str, list[str]] = {
         "bad-link-formatting": [],
         "unresolved-links": [],
@@ -135,12 +179,13 @@ def audit(root: Path) -> dict[str, list[str]]:
         "frontmatter-issues": [],
         "missing-source-trail": [],
         "empty-index-notes": [],
+        "duplicate-note-titles": duplicate_title_issues(locations),
     }
 
     for path in iter_md(root, include_inbox=False):
         text = read(path)
         rel = path.relative_to(root)
-        issues["frontmatter-issues"].extend(audit_frontmatter(path, text, rel))
+        issues["frontmatter-issues"].extend(audit_frontmatter(path, text, rel, locations))
         for m in WIKILINK_RE.finditer(text):
             raw = m.group(1)
             if r"\|" in raw or raw.endswith(".md") or raw.startswith("/"):

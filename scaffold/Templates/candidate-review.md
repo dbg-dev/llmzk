@@ -4,7 +4,7 @@ status: proposed
 mode: ingest
 input:
   - "00 Inbox/example.md"
-created: YYYY-MM-DD
+created: "YYYY-MM-DD"
 applied: false
 schema_version: 1
 ---

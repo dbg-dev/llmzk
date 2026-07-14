@@ -41,6 +41,7 @@ During write-approved mode:
 
 ```bash
 .opencode/bin/llmzk review mark "$ARGUMENTS" --status applied
+.opencode/bin/llmzk review normalize "$ARGUMENTS"
 ```
 
 Then run:
