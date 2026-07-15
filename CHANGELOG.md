@@ -1,5 +1,31 @@
 # Changelog
 
+## v5.5.2 - CLI positional-argument ergonomics
+
+- Mark vault paths, review files, benchmark paths, passports, and new-run arguments as Tyro positional arguments.
+- Keeps common commands such as `.opencode/bin/llmzk audit .`, `.opencode/bin/llmzk review validate Logs/Candidate\ Reviews/foo.md`, and `.opencode/bin/llmzk git diff . --stat` working without `--path`/`--review-file` flags.
+- Documents using the standard `--` separator for unusual paths that begin with a dash.
+
+
+## v5.5.1
+
+- Added `.llmzk.yaml` instance config with `instance_name`, `vault_relative_prefix`, and `link_style`.
+- Added `--vault-prefix` and `--link-style` to `scripts/init-vault.sh`.
+- Added `.opencode/docs/MULTI_INSTANCE.md` for multiple llmzk instances inside one Obsidian vault.
+- Made audit prefix-aware so configured vault-relative links such as `[[AI/04 Concept Notes/X]]` resolve against the current llmzk instance.
+- Made normalize-links and fix-frontmatter respect the configured link style instead of blindly stripping subfolder prefixes.
+- Made benchmarks canonicalize configured-prefix paths and wikilinks.
+- Updated doctor to check `.llmzk.yaml`.
+
+## v5.5
+
+- Added `.opencode/docs/OPERATING_PROFILES.md` with careful, review, and fast operating profiles.
+- Added `/llmzk-review-candidates` for critiquing candidate reviews before `/llmzk-write-approved`.
+- Updated ingest/promote/write-approved commands to reference the careful profile.
+- Updated audit/cleanup/benchmark/Git commands to reference the fast profile.
+- Updated review validation and candidate-review docs to distinguish mechanical validation from review-profile critique.
+- No note-taxonomy changes and no benchmark-logic changes.
+
 ## v5.4
 
 - Added deterministic regression benchmark tool: `llmzk-benchmark`.

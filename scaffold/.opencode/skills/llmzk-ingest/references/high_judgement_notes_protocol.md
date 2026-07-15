@@ -137,3 +137,8 @@ When creating a contradiction/tension note about finite differences versus backp
 - Do not describe finite differences as exponentially worse than backpropagation. Prefer: “finite differences require one extra forward pass per parameter; backpropagation computes all partial derivatives with one backward pass through the existing computation graph.”
 - Do not say backpropagation cost is independent of parameter count. Prefer: “its cost is comparable to a small constant multiple of the forward pass, rather than being multiplied by the number of parameters.”
 - For reasoning-model distillation tensions, avoid absolute wording such as “distillation cannot produce the next generation of reasoning models.” Prefer: “distillation propagates reasoning capability rather than creating frontier capability” or “distillation depends on stronger teacher models.”
+
+
+## Operating profile
+
+Bridge and contradiction/tension notes are created under the careful operating profile and critiqued under the review operating profile. Under the fast profile, do not create or rewrite high-judgement notes; only report mechanical issues.

@@ -4,6 +4,10 @@ Use for promoting rough notes from `00 Fleeting Notes/` into durable Zettelkaste
 
 This skill decides what the notes should become. For Obsidian Markdown syntax and frontmatter mechanics, rely on the installed `obsidian-markdown` skill.
 
+## Operating profile
+
+Use the **careful operating profile** from `.opencode/docs/OPERATING_PROFILES.md` for both candidate-review mode and write-approved mode.
+
 ## Inputs
 
 - one fleeting note, or

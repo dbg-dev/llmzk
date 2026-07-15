@@ -2,6 +2,7 @@
 description: Fix malformed YAML frontmatter in llmzk notes
 ---
 
+Use the **fast operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Run:
 
 ```bash

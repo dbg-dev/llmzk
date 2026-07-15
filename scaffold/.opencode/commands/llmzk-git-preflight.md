@@ -2,6 +2,7 @@
 description: Check whether the vault is safe for a broad llmzk write operation
 ---
 
+Use the **fast operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Run:
 
 ```bash

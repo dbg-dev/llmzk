@@ -2,6 +2,7 @@
 description: Write approved notes from an approved candidate review file
 ---
 
+Use the **careful operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Input: `$ARGUMENTS` must be a candidate review file from `Logs/Candidate Reviews/`.
 
 Run Git preflight first:

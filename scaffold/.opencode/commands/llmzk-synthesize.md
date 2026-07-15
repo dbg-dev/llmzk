@@ -2,6 +2,7 @@
 description: Synthesize a wiki/article output from existing notes
 ---
 
+Use the **careful operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Run Git preflight first:
 
 ```bash

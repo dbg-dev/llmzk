@@ -2,6 +2,7 @@
 description: Show a concise Git diff summary for llmzk changes
 ---
 
+Use the **fast operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Use RTK for token-efficient diff inspection if available. Otherwise run:
 
 ```bash

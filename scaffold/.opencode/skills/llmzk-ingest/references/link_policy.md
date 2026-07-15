@@ -21,22 +21,21 @@ Use links with context in note bodies:
 
 ## Path-qualified links
 
-Path-qualified wikilinks are allowed when they are vault-relative and point to an existing note:
+Path-qualified wikilinks are allowed when they point to an existing note. They may be local to the llmzk instance:
 
 ```markdown
 [[04 Concept Notes/Automatic differentiation|Automatic differentiation]]
 [[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]
 ```
 
-If a wikilink target contains a slash, it is treated as an exact vault-relative path. Do not include temporary project prefixes such as `test/`, local repo names, or external folder paths:
+or Obsidian-vault-relative when `.llmzk.yaml` configures a `vault_relative_prefix` such as `AI`:
 
 ```markdown
-# Bad
-[[test/04 Concept Notes/Automatic differentiation]]
-
-# Good
-[[04 Concept Notes/Automatic differentiation|Automatic differentiation]]
+[[AI/04 Concept Notes/Automatic differentiation|Automatic differentiation]]
+[[AI/00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]
 ```
+
+If a wikilink target contains a slash, it is treated as an exact path after applying the configured prefix. Do not include unknown repo names or external folder paths.
 
 When a title exists both in `00 Fleeting Notes/` and a durable note folder, path-qualify links from durable notes to the durable target. This avoids Obsidian ambiguity while keeping the alias readable.
 
@@ -65,7 +64,7 @@ connects:
 ```markdown
 [[Target\|Alias]]
 [[Target.md]]
-[[test/04 Concept Notes/Target]]
+[[unknown-prefix/04 Concept Notes/Target]]
 ```
 
 Use the normalizer for obvious formatting issues:

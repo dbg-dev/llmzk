@@ -108,3 +108,8 @@ Merge only after the generated note graph is reviewed.
 `/llmzk-ingest` and `/llmzk-promote` are safe aliases that create candidate review files only. Durable notes are written by `/llmzk-write-approved <candidate-review-file>` after user review.
 
 Candidate review files live in `Logs/Candidate Reviews/` and are tracked by Git by default. They form the human approval artifact before durable note writes.
+
+
+## Operating profile
+
+Git status, preflight, diff, commit-message drafting, and revert planning use the fast operating profile. They may inspect state and report mechanical changes, but must not stage, commit, reset, clean, or revert unless the user explicitly asks.

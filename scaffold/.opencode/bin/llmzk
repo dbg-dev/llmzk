@@ -24,8 +24,9 @@ Examples:
   .opencode/bin/llmzk doctor .
   .opencode/bin/llmzk git preflight .
   .opencode/bin/llmzk git diff . --stat
-  .opencode/bin/llmzk review validate Logs/Candidate\ Reviews/example.md
-  .opencode/bin/llmzk review normalize Logs/Candidate\ Reviews/example.md
+  .opencode/bin/llmzk review validate "Logs/Candidate Reviews/example.md"
+  .opencode/bin/llmzk review normalize "Logs/Candidate Reviews/example.md"
+  .opencode/bin/llmzk review validate -- "Logs/Candidate Reviews/-example.md"
 USAGE
 }
 

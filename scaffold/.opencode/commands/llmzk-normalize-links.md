@@ -2,6 +2,7 @@
 description: Normalize obvious Obsidian wikilink formatting issues
 ---
 
+Use the **fast operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Run:
 
 ```bash

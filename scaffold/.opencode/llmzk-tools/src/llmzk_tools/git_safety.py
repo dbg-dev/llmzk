@@ -25,7 +25,7 @@ except Exception:  # pragma: no cover
 class Status:
     """Show Git status summary."""
 
-    path: Path
+    path: tyro.conf.Positional[Path] = Path(".")
     limit: int = 80
     fail_if_dirty: bool = False
 
@@ -34,7 +34,7 @@ class Status:
 class Preflight:
     """Check whether broad writes are safe."""
 
-    path: Path
+    path: tyro.conf.Positional[Path] = Path(".")
     limit: int = 50
 
 
@@ -42,7 +42,7 @@ class Preflight:
 class Diff:
     """Show Git diff."""
 
-    path: Path
+    path: tyro.conf.Positional[Path] = Path(".")
     stat: bool = False
     name_only: bool = False
     files: list[str] = field(default_factory=list)
@@ -52,15 +52,15 @@ class Diff:
 class CommitMessage:
     """Draft a commit message from a passport."""
 
-    passport: Path
+    passport: tyro.conf.Positional[Path]
 
 
 @dataclass
 class RevertRun:
     """Revert files associated with a passport."""
 
-    passport: Path
-    path: Path = Path(".")
+    passport: tyro.conf.Positional[Path]
+    path: tyro.conf.Positional[Path] = Path(".")
     dry_run: bool = False
     apply: bool = False
 

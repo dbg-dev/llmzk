@@ -2,6 +2,7 @@
 description: Draft a structured commit message from an llmzk passport
 ---
 
+Use the **fast operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Run:
 
 ```bash

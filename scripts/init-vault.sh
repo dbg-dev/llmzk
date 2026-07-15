@@ -12,6 +12,8 @@ Options:
   --git                 Initialize a Git repository in the vault. Default
   --no-git              Do not initialize Git
   --commit              Create an initial scaffold commit after git init
+  --vault-prefix PATH   Obsidian-vault-relative prefix for this llmzk instance, e.g. AI or test
+  --link-style STYLE    local|vault_relative. Default: vault_relative if --vault-prefix is set, else local
   --doctor              Run llmzk doctor after install. Default
   --no-doctor           Skip llmzk doctor
   --force               Allow installing into a non-empty vault and overwrite installed system paths
@@ -20,6 +22,7 @@ Options:
 Examples:
   ./scripts/init-vault.sh ~/Vaults/MyResearchVault --mode copy --git --commit
   ./scripts/init-vault.sh ~/Vaults/MyResearchVault --mode symlink --git
+  ./scripts/init-vault.sh ~/Obsidian/AI --vault-prefix AI --mode copy --git
 USAGE
 }
 
@@ -42,6 +45,8 @@ DO_GIT=1
 DO_COMMIT=0
 DO_DOCTOR=1
 FORCE=0
+VAULT_PREFIX=""
+LINK_STYLE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -63,6 +68,22 @@ while [[ $# -gt 0 ]]; do
       ;;
     --commit)
       DO_COMMIT=1
+      shift
+      ;;
+    --vault-prefix)
+      VAULT_PREFIX="${2:-}"
+      shift 2
+      ;;
+    --vault-prefix=*)
+      VAULT_PREFIX="${1#*=}"
+      shift
+      ;;
+    --link-style)
+      LINK_STYLE="${2:-}"
+      shift 2
+      ;;
+    --link-style=*)
+      LINK_STYLE="${1#*=}"
       shift
       ;;
     --doctor)
@@ -94,6 +115,20 @@ if [[ "$MODE" != "copy" && "$MODE" != "symlink" ]]; then
   exit 1
 fi
 
+VAULT_PREFIX="${VAULT_PREFIX#/}"
+VAULT_PREFIX="${VAULT_PREFIX%/}"
+if [[ -z "$LINK_STYLE" ]]; then
+  if [[ -n "$VAULT_PREFIX" ]]; then
+    LINK_STYLE="vault_relative"
+  else
+    LINK_STYLE="local"
+  fi
+fi
+if [[ "$LINK_STYLE" != "local" && "$LINK_STYLE" != "vault_relative" ]]; then
+  echo "--link-style must be 'local' or 'vault_relative'" >&2
+  exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SCAFFOLD="$REPO_ROOT/scaffold"
@@ -115,6 +150,10 @@ mkdir -p "$VAULT"
 echo "llmzk source: $REPO_ROOT"
 echo "Vault: $VAULT"
 echo "Install mode: $MODE"
+echo "Link style: $LINK_STYLE"
+if [[ -n "$VAULT_PREFIX" ]]; then
+  echo "Vault-relative prefix: $VAULT_PREFIX"
+fi
 
 copy_file() {
   local src="$1"
@@ -157,6 +196,17 @@ for name in AGENTS.md opencode.json .gitignore; do
   copy_file "$SCAFFOLD/$name" "$VAULT/$name"
 done
 
+INSTANCE_NAME="${VAULT_PREFIX:-$(basename "$VAULT")}"
+cat > "$VAULT/.llmzk.yaml" <<CONFIG
+# llmzk instance configuration
+# If this llmzk instance lives inside a larger Obsidian vault, set
+# vault_relative_prefix to the folder path from the Obsidian vault root.
+schema_version: 1
+instance_name: "$INSTANCE_NAME"
+vault_relative_prefix: "$VAULT_PREFIX"
+link_style: "$LINK_STYLE"
+CONFIG
+
 install_dir "$SCAFFOLD/.opencode" "$VAULT/.opencode"
 install_dir "$SCAFFOLD/Templates" "$VAULT/Templates"
 
@@ -196,7 +246,7 @@ if [[ "$DO_GIT" -eq 1 ]]; then
     echo "Git: existing repository detected"
   fi
   if [[ "$DO_COMMIT" -eq 1 ]]; then
-    git -C "$VAULT" add AGENTS.md opencode.json .gitignore .opencode Templates \
+    git -C "$VAULT" add AGENTS.md opencode.json .gitignore .llmzk.yaml .opencode Templates \
       "00 Inbox" "00 Fleeting Notes" "01 Sources" "02 Literature Notes" \
       "03 Permanent Notes" "04 Concept Notes" "05 Bridge Notes" \
       "06 Contradiction Notes" "07 Index Notes" "08 Wiki Articles" "09 Media" Logs

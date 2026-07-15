@@ -9,6 +9,7 @@ from llmzk_tools.audit import audit
 from llmzk_tools.fix_frontmatter import fix_text
 from llmzk_tools.review import Normalize, run_normalize, validate_review
 from llmzk_tools.benchmark import run_case
+from llmzk_tools.config import LlmzkConfig
 
 
 def test_normalize_links():
@@ -105,11 +106,19 @@ def test_audit_path_qualified_links_are_exact():
         assert issues["unresolved-links"], issues
 
 
-def test_normalize_project_prefixed_path_keeps_vault_relative_folder():
+def test_normalize_unknown_prefix_is_not_stripped_without_config():
     text = "See [[test/04 Concept Notes/Automatic differentiation.md]]."
     new, changes = normalize_text(text)
-    assert "[[04 Concept Notes/Automatic differentiation]]" in new
-    assert changes == [("test/04 Concept Notes/Automatic differentiation.md", "04 Concept Notes/Automatic differentiation")]
+    assert "[[test/04 Concept Notes/Automatic differentiation]]" in new
+    assert changes == [("test/04 Concept Notes/Automatic differentiation.md", "test/04 Concept Notes/Automatic differentiation")]
+
+
+def test_normalize_configured_vault_prefix_is_preserved():
+    cfg = LlmzkConfig(instance_name="test", vault_relative_prefix="test", link_style="vault_relative")
+    text = "See [[04 Concept Notes/Automatic differentiation.md]]."
+    new, changes = normalize_text(text, config=cfg)
+    assert "[[test/04 Concept Notes/Automatic differentiation]]" in new
+    assert changes == [("04 Concept Notes/Automatic differentiation.md", "test/04 Concept Notes/Automatic differentiation")]
 
 
 def test_normalize_ambiguous_duplicate_link_prefers_durable_path():
@@ -286,6 +295,38 @@ checks:
         assert result.failed == 0, result.findings
         assert result.passed >= 3, result.findings
 
+
+def test_benchmark_prefix_paths_are_canonicalized():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        case_dir = root / "case"
+        vault = root / "vault"
+        case_dir.mkdir()
+        (vault / "04 Concept Notes").mkdir(parents=True)
+        (vault / ".llmzk.yaml").write_text(
+            "schema_version: 1\ninstance_name: test\nvault_relative_prefix: test\nlink_style: vault_relative\n",
+            encoding="utf-8",
+        )
+        (vault / "04 Concept Notes" / "Automatic differentiation.md").write_text(
+            "# Automatic differentiation\n\nSee [[test/04 Concept Notes/Automatic differentiation|AD]].\n",
+            encoding="utf-8",
+        )
+        benchmark_yaml = (
+            "name: Prefix benchmark\n"
+            "checks:\n"
+            "  required_files:\n"
+            "    - \"test/04 Concept Notes/Automatic differentiation.md\"\n"
+            "  required_wikilinks:\n"
+            "    - path: \"04 Concept Notes/Automatic differentiation.md\"\n"
+            "      links:\n"
+            "        - \"[[04 Concept Notes/Automatic differentiation|AD]]\"\n"
+            "  audit:\n"
+            "    zero: [\"unresolved-links\"]\n"
+        )
+        (case_dir / "benchmark.yaml").write_text(benchmark_yaml, encoding="utf-8")
+        result = run_case(case_dir / "benchmark.yaml", vault)
+        assert result.failed == 0, result.findings
+
 def main() -> int:
     test_normalize_links()
     test_normalize_ignores_code_fences()
@@ -297,11 +338,13 @@ def main() -> int:
     test_audit_wrt_title_not_truncated()
     test_audit_duplicate_note_titles()
     test_audit_path_qualified_links_are_exact()
-    test_normalize_project_prefixed_path_keeps_vault_relative_folder()
+    test_normalize_unknown_prefix_is_not_stripped_without_config()
+    test_normalize_configured_vault_prefix_is_preserved()
     test_normalize_ambiguous_duplicate_link_prefers_durable_path()
     test_candidate_review_validate()
     test_candidate_review_normalize()
     test_benchmark_required_and_forbidden_files()
+    test_benchmark_prefix_paths_are_canonicalized()
     print("Smoke test passed.")
     return 0
 

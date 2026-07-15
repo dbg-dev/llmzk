@@ -2,6 +2,7 @@
 description: Run llmzk regression benchmark expectations against the vault
 ---
 
+Use the **fast operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Run the installed benchmark suite against the current vault:
 
 ```bash

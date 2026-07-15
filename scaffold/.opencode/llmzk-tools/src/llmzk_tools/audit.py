@@ -11,6 +11,8 @@ from typing import Any, Iterable
 import tyro
 import yaml
 
+from llmzk_tools.config import LlmzkConfig, load_config, local_markdown_path
+
 WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 CODE_FENCE_RE = re.compile(r"```(\w+)?\n(.*?)```", re.DOTALL)
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n?", re.DOTALL)
@@ -25,7 +27,8 @@ CONTENT_ROOTS = {
 }
 RAW_INBOX_ROOT = "00 Inbox"
 DURABLE_ROOTS = CONTENT_ROOTS - {"00 Fleeting Notes"}
-EXACT_PATH_ROOTS = CONTENT_ROOTS | {RAW_INBOX_ROOT, "Logs"}
+# Path-qualified links are resolved by llmzk_tools.config so they can
+# optionally include the instance vault-relative prefix.
 
 
 def read(path: Path) -> str:
@@ -109,31 +112,25 @@ def is_exact_path_target(raw: str) -> bool:
     return "/" in target
 
 
-def exact_target_path(raw: str) -> PurePosixPath | None:
-    """Return a vault-relative Markdown path for a path-qualified wikilink.
+def exact_target_path(raw: str, config: LlmzkConfig) -> PurePosixPath | None:
+    """Return an llmzk-root-relative Markdown path for a path-qualified wikilink.
 
-    If a wikilink target contains a slash, llmzk treats it as an exact
-    vault-relative path. This intentionally prevents invalid links such as
-    ``[[test/04 Concept Notes/Automatic differentiation]]`` from silently
-    resolving by basename fallback.
+    Path-qualified links may be written either relative to the llmzk instance
+    root (``04 Concept Notes/X``) or relative to the outer Obsidian vault when
+    ``vault_relative_prefix`` is configured (``AI/04 Concept Notes/X``).
+    Unknown prefixes still fail instead of silently resolving by basename.
     """
     target = raw_target(raw)
     if not target or "/" not in target:
         return None
-    rel = PurePosixPath(target)
-    if rel.is_absolute() or any(part in {"", ".", ".."} for part in rel.parts):
-        return None
-    if rel.suffix != ".md":
-        rel = PurePosixPath(str(rel) + ".md")
-    if not rel.parts or rel.parts[0] not in EXACT_PATH_ROOTS:
-        return None
-    return rel
+    local_target = config.to_local_target(target)
+    return local_markdown_path(local_target)
 
 
-def wikilink_resolves(root: Path, raw: str, locations: dict[str, list[Path]]) -> bool:
+def wikilink_resolves(root: Path, raw: str, locations: dict[str, list[Path]], config: LlmzkConfig) -> bool:
     if is_local_heading_target(raw):
         return True
-    exact = exact_target_path(raw)
+    exact = exact_target_path(raw, config)
     if exact is not None:
         return (root / Path(*exact.parts)).is_file()
     if is_exact_path_target(raw):
@@ -164,7 +161,7 @@ def _duplicate_fleeting_and_durable(title: str, locations: dict[str, list[Path]]
     return has_fleeting and has_durable
 
 
-def audit_frontmatter(path: Path, text: str, rel: Path, locations: dict[str, list[Path]]) -> list[str]:
+def audit_frontmatter(path: Path, text: str, rel: Path, locations: dict[str, list[Path]], config: LlmzkConfig) -> list[str]:
     fm, _ = split_frontmatter(text)
     if fm is None:
         return []
@@ -192,8 +189,8 @@ def audit_frontmatter(path: Path, text: str, rel: Path, locations: dict[str, lis
                     if r"\|" in item:
                         issues.append(f"{rel}: `{field}` contains escaped pipe: {item!r}")
                     if field == "origin_trail" and item.startswith("[[") and item.endswith("]]" ):
-                        target = raw_target(item[2:-2])
-                        title = target_stem(item[2:-2])
+                        target = config.to_local_target(raw_target(item[2:-2]))
+                        title = target_stem(target)
                         if _duplicate_fleeting_and_durable(title, locations) and "/" not in target:
                             issues.append(
                                 f"{rel}: `origin_trail` should path-qualify fleeting source for duplicate title: {item!r}"
@@ -227,6 +224,7 @@ def ambiguous_link_issue(rel: Path, raw: str, locations: dict[str, list[Path]]) 
 
 
 def audit(root: Path) -> dict[str, list[str]]:
+    config = load_config(root)
     locations = title_locations(root)
     issues: dict[str, list[str]] = {
         "bad-link-formatting": [],
@@ -243,12 +241,12 @@ def audit(root: Path) -> dict[str, list[str]]:
     for path in iter_md(root, include_inbox=False):
         text = read(path)
         rel = path.relative_to(root)
-        issues["frontmatter-issues"].extend(audit_frontmatter(path, text, rel, locations))
+        issues["frontmatter-issues"].extend(audit_frontmatter(path, text, rel, locations, config))
         for m in WIKILINK_RE.finditer(text):
             raw = m.group(1)
             if r"\|" in raw or raw.endswith(".md") or raw.startswith("/"):
                 issues["bad-link-formatting"].append(f"{rel}: [[{raw}]]")
-            if not wikilink_resolves(root, raw, locations):
+            if not wikilink_resolves(root, raw, locations, config):
                 issues["unresolved-links"].append(f"{rel}: [[{raw}]]")
             if rel.parts and rel.parts[0] in DURABLE_ROOTS:
                 issue = ambiguous_link_issue(rel, raw, locations)
@@ -275,7 +273,7 @@ def audit(root: Path) -> dict[str, list[str]]:
         rel = path.relative_to(root)
         for m in WIKILINK_RE.finditer(text):
             raw = m.group(1)
-            if not wikilink_resolves(root, raw, locations):
+            if not wikilink_resolves(root, raw, locations, config):
                 issues["raw-inbox-unresolved-links"].append(f"{rel}: [[{raw}]]")
 
     return issues
@@ -311,7 +309,7 @@ def write_review_queue(root: Path, issues: dict[str, list[str]]) -> None:
         )
 
 
-def run(root: Path) -> int:
+def run(root: tyro.conf.Positional[Path] = Path(".")) -> int:
     """Audit an llmzk vault and write review-queue files."""
     issues = audit(root)
     write_review_queue(root, issues)

@@ -38,3 +38,21 @@ The CLIs use `tyro`. Git-facing operations use `GitPython`.
 ## Benchmark
 
 `llmzk-benchmark` checks an existing vault against benchmark YAML files. It does not run an LLM.
+
+## CLI positional arguments
+
+The installed `.opencode/bin/llmzk` wrapper uses Tyro-backed tools whose main path arguments are positional. Common commands should work as:
+
+```bash
+.opencode/bin/llmzk audit .
+.opencode/bin/llmzk benchmark .opencode/benchmarks --vault .
+.opencode/bin/llmzk review validate "Logs/Candidate Reviews/example.md"
+.opencode/bin/llmzk git diff . --stat
+```
+
+For a path that begins with `-`, use the standard end-of-options separator:
+
+```bash
+.opencode/bin/llmzk review validate -- "Logs/Candidate Reviews/-example.md"
+```
+

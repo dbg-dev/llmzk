@@ -2,6 +2,7 @@
 description: Propose candidate durable notes for fleeting material without writing approved notes
 ---
 
+Use the **careful operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Run Git preflight first:
 
 ```bash

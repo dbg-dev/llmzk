@@ -2,6 +2,7 @@
 description: Safely ingest an inbox source by first creating a candidate review
 ---
 
+Use the **careful operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 This command is safe-by-default. It is an alias for `/llmzk-ingest-candidates`.
 
 Run `/llmzk-ingest-candidates $ARGUMENTS`.

@@ -2,6 +2,7 @@
 description: Safely promote fleeting notes by first creating a candidate review
 ---
 
+Use the **careful operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 This command is safe-by-default. It is an alias for `/llmzk-promote-candidates`.
 
 Run `/llmzk-promote-candidates $ARGUMENTS`.

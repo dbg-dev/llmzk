@@ -2,6 +2,7 @@
 description: Check that the installed llmzk vault scaffold is healthy
 ---
 
+Use the **fast operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Run:
 
 ```bash

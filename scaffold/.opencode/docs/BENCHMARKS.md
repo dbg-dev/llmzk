@@ -99,3 +99,35 @@ A case may include `manual_rubric` items. These are printed as warnings and are
 for human review, not automated pass/fail. Use them for high-judgement checks
 such as whether a bridge note captures a representation shift rather than a mere
 association.
+
+
+## Operating profile
+
+Run benchmarks under the fast operating profile. Benchmarking checks an existing generated vault and should not create, rewrite, or reinterpret durable notes.
+
+## Subfolder-aware benchmark paths
+
+Benchmarks are evaluated from the llmzk instance root. If `.llmzk.yaml` sets a `vault_relative_prefix`, benchmark file paths and wikilinks are canonicalized before comparison.
+
+For example, with:
+
+```yaml
+vault_relative_prefix: "AI"
+link_style: "vault_relative"
+```
+
+these are equivalent for benchmark purposes:
+
+```text
+04 Concept Notes/Automatic differentiation.md
+AI/04 Concept Notes/Automatic differentiation.md
+```
+
+and these link targets are equivalent:
+
+```markdown
+[[04 Concept Notes/Automatic differentiation|Automatic differentiation]]
+[[AI/04 Concept Notes/Automatic differentiation|Automatic differentiation]]
+```
+
+This keeps benchmark expectations stable whether the llmzk instance is installed at the Obsidian vault root or inside a subfolder.

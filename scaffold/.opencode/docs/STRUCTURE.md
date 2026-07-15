@@ -20,6 +20,7 @@ The install script creates a concrete vault:
 ```text
 AGENTS.md
 opencode.json
+.llmzk.yaml
 .opencode/
 Templates/
 00 Inbox/
@@ -61,3 +62,13 @@ The vault root is deliberately not a Python project.
 ## Candidate review gate
 
 Ingest and promote workflows write candidate review artifacts to `Logs/Candidate Reviews/` first. Durable notes are written only after `/llmzk-write-approved` consumes an approved candidate review.
+
+
+## Operating profiles
+
+See `.opencode/docs/OPERATING_PROFILES.md` for the careful, review, and fast instruction overlays used by commands and skills.
+
+
+## Multi-instance installs
+
+An llmzk instance may live inside a subfolder of a larger Obsidian vault. In that case `.llmzk.yaml` records the `vault_relative_prefix` and `link_style`. See `.opencode/docs/MULTI_INSTANCE.md`.

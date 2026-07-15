@@ -16,7 +16,11 @@ def slugify(text: str) -> str:
     return text or "run"
 
 
-def run(kind: Literal["ingest", "promote", "synthesize", "review"], name: str, root: Path = Path(".")) -> int:
+def run(
+    kind: tyro.conf.Positional[Literal["ingest", "promote", "synthesize", "review"]],
+    name: tyro.conf.Positional[str],
+    root: tyro.conf.Positional[Path] = Path("."),
+) -> int:
     """Create empty passport and decision log files for an llmzk workflow run."""
     today = dt.date.today().isoformat()
     workflow_id = f"{today}-{kind}-{slugify(name)}"

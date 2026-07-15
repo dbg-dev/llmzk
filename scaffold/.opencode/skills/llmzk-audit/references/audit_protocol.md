@@ -21,7 +21,7 @@ The audit reports `duplicate-note-titles` when a note basename appears in `00 Fl
 
 ## Path-qualified link warning
 
-If a wikilink target contains a slash, audit treats it as an exact vault-relative path. For example, `[[04 Concept Notes/Automatic differentiation]]` must point to that actual Markdown note. Accidental prefixes such as `[[test/04 Concept Notes/Automatic differentiation]]` should be reported as unresolved, not silently resolved by basename.
+If a wikilink target contains a slash, audit treats it as an exact path. The path may be llmzk-local, e.g. `[[04 Concept Notes/Automatic differentiation]]`, or Obsidian-vault-relative when `.llmzk.yaml` configures `vault_relative_prefix`, e.g. `[[AI/04 Concept Notes/Automatic differentiation]]`. Unknown prefixes should be reported as unresolved, not silently resolved by basename.
 
 ## Ambiguous link warning
 

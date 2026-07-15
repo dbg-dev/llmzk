@@ -4,6 +4,10 @@ Use for source material in `00 Inbox/`: papers, articles, book chapters, or subs
 
 This skill is a Zettelkasten workflow. For Obsidian Markdown syntax, properties/frontmatter, wikilinks, embeds, and callouts, rely on the installed `obsidian-markdown` skill. For live vault read/search/create/backlink operations, use `obsidian-cli` where appropriate.
 
+## Operating profile
+
+Use the **careful operating profile** from `.opencode/docs/OPERATING_PROFILES.md` for both candidate-review mode and write-approved mode.
+
 ## Inputs
 
 - one source file or a small set of related source files from `00 Inbox/`

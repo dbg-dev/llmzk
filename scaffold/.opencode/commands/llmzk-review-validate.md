@@ -2,6 +2,7 @@
 description: Validate a candidate review file before writing approved notes
 ---
 
+Use the **fast operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Validate `$ARGUMENTS`:
 
 ```bash

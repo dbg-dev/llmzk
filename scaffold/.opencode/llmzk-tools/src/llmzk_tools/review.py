@@ -53,7 +53,7 @@ class Finding:
 class Validate:
     """Validate a candidate review file."""
 
-    review_file: Path
+    review_file: tyro.conf.Positional[Path]
     json: bool = False
 
 
@@ -61,7 +61,7 @@ class Validate:
 class Mark:
     """Mark a candidate review file as applied, rejected, or superseded."""
 
-    review_file: Path
+    review_file: tyro.conf.Positional[Path]
     status: Literal["applied", "rejected", "superseded"] = "applied"
 
 
@@ -69,7 +69,7 @@ class Mark:
 class Normalize:
     """Normalize candidate review frontmatter without changing review body."""
 
-    review_file: Path
+    review_file: tyro.conf.Positional[Path]
 
 
 Command = Union[

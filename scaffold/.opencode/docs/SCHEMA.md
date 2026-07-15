@@ -68,7 +68,7 @@ If a durable note links to a title that also exists in `00 Fleeting Notes/`, pat
 [[04 Concept Notes/Automatic differentiation|Automatic differentiation]]
 ```
 
-If a wikilink contains a slash, the audit treats it as an exact vault-relative path. Accidental prefixes such as `test/04 Concept Notes/...` should be normalised or fixed.
+If a wikilink contains a slash, the audit treats it as an exact path. The path may be local to the llmzk instance, or it may include the configured `.llmzk.yaml` `vault_relative_prefix`. Unknown prefixes should be normalised or fixed.
 
 ## Mathematical wording
 

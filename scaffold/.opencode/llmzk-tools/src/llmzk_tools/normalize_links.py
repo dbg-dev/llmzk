@@ -11,6 +11,8 @@ import re
 
 import tyro
 
+from llmzk_tools.config import LlmzkConfig, load_config, starts_with_known_root
+
 WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 KNOWN_ROOTS = [
     "00 Inbox", "00 Fleeting Notes", "01 Sources", "02 Literature Notes",
@@ -72,37 +74,30 @@ def preferred_durable_path(title: str, locations: dict[str, list[Path]] | None) 
     return text[:-3] if text.endswith(".md") else text
 
 
-def normalize_target(target: str, locations: dict[str, list[Path]] | None = None) -> str:
+def normalize_target(target: str, locations: dict[str, list[Path]] | None = None, config: LlmzkConfig | None = None) -> str:
     target = target.replace(r"\|", "|")
     if "|" in target:
         left, alias = target.split("|", 1)
-        left = _clean_path(left)
+        left = _clean_path(left, config=config)
         if "/" not in left:
             left = preferred_durable_path(left, locations) or left
+        if config:
+            left = config.render_target(left)
         return f"{left}|{alias}"
-    cleaned = _clean_path(target)
+    cleaned = _clean_path(target, config=config)
     if "/" not in cleaned:
         cleaned = preferred_durable_path(cleaned, locations) or cleaned
+    if config:
+        cleaned = config.render_target(cleaned)
     return cleaned
 
 
-def _clean_path(target: str) -> str:
+def _clean_path(target: str, config: LlmzkConfig | None = None) -> str:
     target = target.strip().strip("/")
     if target.endswith(".md"):
         target = target[:-3]
-    # Remove accidental project/test prefixes before known vault folders, but keep
-    # the vault-relative folder path. Example:
-    #   test/04 Concept Notes/Automatic differentiation.md
-    # becomes:
-    #   04 Concept Notes/Automatic differentiation
-    for folder in KNOWN_ROOTS:
-        marker = folder + "/"
-        idx = target.find(marker)
-        if idx >= 0:
-            target = target[idx:]
-            if target.endswith(".md"):
-                target = target[:-3]
-            break
+    if config:
+        target = config.to_local_target(target)
     return target.strip().strip("/")
 
 
@@ -125,7 +120,7 @@ def split_frontmatter(text: str) -> tuple[str, str]:
     return text[:close_end], text[close_end:]
 
 
-def normalize_text(text: str, locations: dict[str, list[Path]] | None = None) -> tuple[str, list[tuple[str, str]]]:
+def normalize_text(text: str, locations: dict[str, list[Path]] | None = None, config: LlmzkConfig | None = None) -> tuple[str, list[tuple[str, str]]]:
     """Normalize wikilinks outside frontmatter and fenced code blocks.
 
     Documentation often contains examples of bad links. Do not rewrite code-fenced
@@ -138,7 +133,7 @@ def normalize_text(text: str, locations: dict[str, list[Path]] | None = None) ->
 
     def repl(match: re.Match[str]) -> str:
         old = match.group(1)
-        new = normalize_target(old, locations)
+        new = normalize_target(old, locations, config)
         if old != new:
             changes.append((old, new))
         return f"[[{new}]]"
@@ -165,15 +160,16 @@ def normalize_text(text: str, locations: dict[str, list[Path]] | None = None) ->
     return frontmatter + "".join(out), changes
 
 
-def run(root: Path, apply: bool = False, dry_run: bool = False) -> int:
+def run(root: tyro.conf.Positional[Path] = Path("."), apply: bool = False, dry_run: bool = False) -> int:
     """Normalize escaped-pipe and project-prefixed wikilinks outside fenced code blocks."""
     # `dry_run` is retained for command compatibility; dry-run is the default unless `apply` is set.
     _ = dry_run
     total = 0
     locations = build_title_locations(root)
+    config = load_config(root)
     for path in iter_markdown(root):
         text = path.read_text(encoding="utf-8")
-        new_text, changes = normalize_text(text, locations)
+        new_text, changes = normalize_text(text, locations, config)
         if changes:
             total += len(changes)
             print(f"{path}:")

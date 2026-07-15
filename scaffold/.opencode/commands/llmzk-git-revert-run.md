@@ -2,6 +2,7 @@
 description: Help revert files associated with an llmzk passport/run
 ---
 
+Use the **fast operating profile** from `.opencode/docs/OPERATING_PROFILES.md`.
 Run dry-run first:
 
 ```bash

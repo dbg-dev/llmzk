@@ -1,0 +1,5 @@
+# llmzk instance configuration
+schema_version: 1
+instance_name: "root"
+vault_relative_prefix: ""
+link_style: "local"

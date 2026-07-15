@@ -29,7 +29,7 @@ LOG_FOLDERS = [
     "Logs/Review Queue",
 ]
 
-ROOT_FILES = ["AGENTS.md", "opencode.json", ".gitignore"]
+ROOT_FILES = ["AGENTS.md", "opencode.json", ".gitignore", ".llmzk.yaml"]
 REQUIRED_OPEN_CODE_DIRS = [
     ".opencode/commands",
     ".opencode/agents",
@@ -41,6 +41,7 @@ REQUIRED_OPEN_CODE_DIRS = [
 ]
 REQUIRED_COMMANDS = [
     "llmzk-audit.md",
+    "llmzk-benchmark.md",
     "llmzk-doctor.md",
     "llmzk-fix-frontmatter.md",
     "llmzk-git-commit-message.md",
@@ -56,6 +57,7 @@ REQUIRED_COMMANDS = [
     "llmzk-normalize-links.md",
     "llmzk-promote.md",
     "llmzk-review.md",
+    "llmzk-review-candidates.md",
     "llmzk-synthesize.md",
 ]
 REQUIRED_SKILLS = [
@@ -73,9 +75,14 @@ REQUIRED_DOCS = [
     "LINT_RULES.md",
     "GIT_POLICY.md",
     "OBSIDIAN_SKILLS.md",
+    "OPERATING_PROFILES.md",
+    "BENCHMARKS.md",
+    "MULTI_INSTANCE.md",
 ]
 REQUIRED_TOOLS = [
     "audit.py",
+    "benchmark.py",
+    "config.py",
     "doctor.py",
     "fix_frontmatter.py",
     "git_safety.py",
@@ -246,6 +253,7 @@ def check_tool_project(findings: list[Finding], root: Path) -> None:
     text = pyproject.read_text(encoding="utf-8")
     required = [
         "llmzk-audit",
+        "llmzk-benchmark",
         "llmzk-doctor",
         "llmzk-fix-frontmatter",
         "llmzk-git-safety",
@@ -266,6 +274,21 @@ def check_tool_project(findings: list[Finding], root: Path) -> None:
             add(findings, "fail", f"llmzk-tools dependency missing: {dep}")
 
 
+
+def check_llmzk_config(findings: list[Finding], root: Path) -> None:
+    path = root / ".llmzk.yaml"
+    if not path.exists():
+        add(findings, "fail", "Missing llmzk instance config: .llmzk.yaml")
+        return
+    text = path.read_text(encoding="utf-8")
+    for key in ["schema_version:", "instance_name:", "vault_relative_prefix:", "link_style:"]:
+        if key in text:
+            add(findings, "ok", f"llmzk config contains: {key[:-1]}")
+        else:
+            add(findings, "fail", f"llmzk config missing key: {key[:-1]}")
+    if "link_style: vault_relative" in text and "vault_relative_prefix: """ in text:
+        add(findings, "warn", "link_style is vault_relative but vault_relative_prefix is empty")
+
 def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = False) -> tuple[int, list[Finding]]:
     root = vault.expanduser().resolve()
     findings: list[Finding] = []
@@ -282,6 +305,7 @@ def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = Fal
     check_tool_project(findings, root)
     check_exists(findings, root / "Templates", REQUIRED_TEMPLATES, kind="template")
     check_gitkeep(findings, root)
+    check_llmzk_config(findings, root)
     check_opencode_config(findings, root)
     check_gitignore(findings, root)
     check_git_visibility(findings, root)
@@ -303,8 +327,7 @@ def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = Fal
 
 
 def doctor(
-    vault: Path,
-    /,  # Mark the end of positional arguments.
+    vault: tyro.conf.Positional[Path] = Path("."),
     fail_if_dirty: bool = False,
     quiet_ok: bool = False,
     json: bool = False,

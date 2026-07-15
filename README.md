@@ -1,6 +1,6 @@
 # llmzk
 
-Current version: v5.3.3
+Current version: v5.5.1
 
 `llmzk` is a lightweight OpenCode + Obsidian harness for building a Zettelkasten with LLM assistance.
 
@@ -18,6 +18,7 @@ The install script creates a vault with:
 ```text
 AGENTS.md
 opencode.json
+.llmzk.yaml               llmzk instance config
 .opencode/                 OpenCode commands, agents, skills, docs, wrapper, tools
 Templates/                 reusable note templates
 00 Inbox/                  raw source inputs
@@ -52,6 +53,17 @@ For development, you can symlink the system layer instead:
 
 Use `copy` for portability. Use `symlink` when actively developing `llmzk` and wanting the vault to use the local upstream files.
 
+
+## Multi-instance / subfolder installs
+
+An Obsidian vault can contain multiple llmzk instances, for example `Vault/AI/` and `Vault/Maths/`. Use `--vault-prefix` when the llmzk instance lives inside a larger Obsidian vault:
+
+```bash
+./scripts/init-vault.sh ~/Obsidian/AI --vault-prefix AI --mode copy --git --commit
+```
+
+This writes `.llmzk.yaml` so audit, normalize-links, fix-frontmatter, and benchmark can understand Obsidian-vault-relative links such as `[[AI/04 Concept Notes/Automatic differentiation|Automatic differentiation]]`.
+
 ## Git safety
 
 The installed vault is initialized as its own Git repository unless you pass `--no-git`.
@@ -73,6 +85,7 @@ Agents may inspect Git status and diffs, but must not stage, commit, reset, clea
 /llmzk-promote-candidates <path>      # create candidate review only
 /llmzk-write-approved <review-file>   # write approved [x] candidates
 /llmzk-review-validate <review-file>
+/llmzk-review-candidates <review-file>
 /llmzk-audit
 /llmzk-normalize-links --dry-run
 /llmzk-fix-frontmatter --apply
@@ -85,6 +98,19 @@ Agents may inspect Git status and diffs, but must not stage, commit, reset, clea
 /llmzk-synthesize <topic>
 ```
 
+
+
+## Operating profiles
+
+v5.5 adds llmzk operating profiles. These are instruction overlays for agent behaviour, not OpenCode permission modes.
+
+```text
+careful = ingest, promote, and write-approved knowledge creation
+review  = critique candidate reviews before durable notes are written
+fast    = audit, benchmark, Git inspection, frontmatter/link cleanup
+```
+
+See `.opencode/docs/OPERATING_PROFILES.md` in an installed vault.
 
 ## Candidate review gate
 
@@ -146,6 +172,14 @@ scaffold/Templates/               reusable note templates
 ```
 
 
+## v5.5.1 notes
+
+This release adds subfolder-aware linking through `.llmzk.yaml`, `--vault-prefix`, prefix-aware audit/normalization, and benchmark canonicalisation for vault-relative links.
+
+## v5.5 notes
+
+This release adds operating profiles and `/llmzk-review-candidates` to make the candidate review gate easier to use. It does not change the note taxonomy or deterministic benchmark logic.
+
 ## v5.3.3 bugfix notes
 
 This release fixes audit false positives for wikilinks whose titles contain periods such as `w.r.t.`, regenerates Review Queue reports on each audit, and normalises candidate-review status timestamps when reviews are marked applied/rejected/superseded.
@@ -158,3 +192,21 @@ This release fixes audit false positives for wikilinks whose titles contain peri
 - Candidate-review frontmatter normalization for lowercase booleans and quoted ISO timestamps.
 - Backpropagation cost wording guardrails.
 - Softer reasoning-distillation contradiction wording guidance.
+
+## CLI positional arguments
+
+The installed `.opencode/bin/llmzk` wrapper uses Tyro-backed tools whose main path arguments are positional. Common commands should work as:
+
+```bash
+.opencode/bin/llmzk audit .
+.opencode/bin/llmzk benchmark .opencode/benchmarks --vault .
+.opencode/bin/llmzk review validate "Logs/Candidate Reviews/example.md"
+.opencode/bin/llmzk git diff . --stat
+```
+
+For a path that begins with `-`, use the standard end-of-options separator:
+
+```bash
+.opencode/bin/llmzk review validate -- "Logs/Candidate Reviews/-example.md"
+```
+

@@ -17,8 +17,10 @@ import tyro
 import yaml
 
 from llmzk_tools.audit import audit
+from llmzk_tools.config import LlmzkConfig, load_config
 
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n?", re.DOTALL)
+WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 
 
 @dataclass
@@ -85,60 +87,90 @@ def add(result: CaseResult, level: str, check: str, message: str) -> None:
     result.findings.append(Finding(result.name, level, check, message))
 
 
-def path_exists(vault: Path, item: str) -> bool:
-    return (vault / item).exists()
+def canonical_item(item: str, config: LlmzkConfig) -> str:
+    item = str(item).strip().strip("/")
+    return config.to_local_target(item)
 
 
-def glob_matches(vault: Path, pattern: str) -> list[Path]:
+def resolve_item(vault: Path, item: str, config: LlmzkConfig) -> Path:
+    direct = vault / str(item)
+    if direct.exists():
+        return direct
+    canonical = canonical_item(str(item), config)
+    candidate = vault / canonical
+    if candidate.exists():
+        return candidate
+    if not canonical.endswith(".md") and str(item).endswith(".md"):
+        return vault / f"{canonical}.md"
+    return candidate
+
+
+def path_exists(vault: Path, item: str, config: LlmzkConfig) -> bool:
+    return resolve_item(vault, item, config).exists()
+
+
+def glob_matches(vault: Path, pattern: str, config: LlmzkConfig) -> list[Path]:
     # pathlib glob is enough for normal glob patterns, but filter out macOS metadata.
-    matches = [p for p in vault.glob(pattern) if "__MACOSX" not in p.parts and not p.name.startswith("._")]
-    return sorted(matches)
+    patterns = [str(pattern)]
+    canonical = canonical_item(str(pattern), config)
+    if canonical not in patterns:
+        patterns.append(canonical)
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for pat in patterns:
+        for p in vault.glob(pat):
+            if "__MACOSX" in p.parts or p.name.startswith("._"):
+                continue
+            if p not in seen:
+                seen.add(p)
+                out.append(p)
+    return sorted(out)
 
 
-def check_required_files(result: CaseResult, vault: Path, required: list[str]) -> None:
+def check_required_files(result: CaseResult, vault: Path, required: list[str], config: LlmzkConfig) -> None:
     for item in required:
-        if path_exists(vault, item):
+        if path_exists(vault, item, config):
             add(result, "pass", "required_file", item)
         else:
             add(result, "fail", "required_file", f"missing: {item}")
 
 
-def check_forbidden_files(result: CaseResult, vault: Path, forbidden: list[str]) -> None:
+def check_forbidden_files(result: CaseResult, vault: Path, forbidden: list[str], config: LlmzkConfig) -> None:
     for item in forbidden:
         if any(char in item for char in "*?[]"):
-            matches = glob_matches(vault, item)
+            matches = glob_matches(vault, item, config)
             if matches:
                 add(result, "fail", "forbidden_file", f"forbidden pattern matched {len(matches)} file(s): {item}")
             else:
                 add(result, "pass", "forbidden_file", item)
-        elif path_exists(vault, item):
+        elif path_exists(vault, item, config):
             add(result, "fail", "forbidden_file", f"exists: {item}")
         else:
             add(result, "pass", "forbidden_file", item)
 
 
-def check_required_globs(result: CaseResult, vault: Path, items: list[dict[str, Any]]) -> None:
+def check_required_globs(result: CaseResult, vault: Path, items: list[dict[str, Any]], config: LlmzkConfig) -> None:
     for spec in items:
         pattern = str(spec.get("glob", ""))
         min_count = int(spec.get("min", 1))
-        matches = glob_matches(vault, pattern)
+        matches = glob_matches(vault, pattern, config)
         if len(matches) >= min_count:
             add(result, "pass", "required_glob", f"{pattern} matched {len(matches)}")
         else:
             add(result, "fail", "required_glob", f"{pattern} matched {len(matches)}, expected at least {min_count}")
 
 
-def text_targets(vault: Path, spec: dict[str, Any]) -> list[Path]:
+def text_targets(vault: Path, spec: dict[str, Any], config: LlmzkConfig) -> list[Path]:
     if "path" in spec:
-        return [vault / str(spec["path"])]
+        return [resolve_item(vault, str(spec["path"]), config)]
     if "glob" in spec:
-        return glob_matches(vault, str(spec["glob"]))
+        return glob_matches(vault, str(spec["glob"]), config)
     return []
 
 
-def check_required_text(result: CaseResult, vault: Path, items: list[dict[str, Any]]) -> None:
+def check_required_text(result: CaseResult, vault: Path, items: list[dict[str, Any]], config: LlmzkConfig) -> None:
     for spec in items:
-        targets = text_targets(vault, spec)
+        targets = text_targets(vault, spec, config)
         if not targets:
             add(result, "fail", "required_text", f"no target matched: {spec}")
             continue
@@ -160,9 +192,9 @@ def check_required_text(result: CaseResult, vault: Path, items: list[dict[str, A
                     add(result, "fail", "required_text_any", f"{rel(target, vault)} contains none of {any_needles}")
 
 
-def check_forbidden_text(result: CaseResult, vault: Path, items: list[dict[str, Any]]) -> None:
+def check_forbidden_text(result: CaseResult, vault: Path, items: list[dict[str, Any]], config: LlmzkConfig) -> None:
     for spec in items:
-        targets = text_targets(vault, spec)
+        targets = text_targets(vault, spec, config)
         if not targets:
             add(result, "warn", "forbidden_text", f"no target matched: {spec}")
             continue
@@ -178,21 +210,30 @@ def check_forbidden_text(result: CaseResult, vault: Path, items: list[dict[str, 
                     add(result, "pass", "forbidden_text", f"{rel(target, vault)} avoids {needle!r}")
 
 
-def check_required_wikilinks(result: CaseResult, vault: Path, items: list[dict[str, Any]]) -> None:
+def _wikilink_target(inner: str, config: LlmzkConfig) -> str:
+    inner = inner.replace(r"\|", "|").strip()
+    target = inner.split("|", 1)[0].split("#", 1)[0].strip().strip("/")
+    if target.endswith(".md"):
+        target = target[:-3]
+    return config.to_local_target(target)
+
+
+def check_required_wikilinks(result: CaseResult, vault: Path, items: list[dict[str, Any]], config: LlmzkConfig) -> None:
     for spec in items:
-        target = vault / str(spec.get("path", ""))
+        target = resolve_item(vault, str(spec.get("path", "")), config)
         if not target.exists():
             add(result, "fail", "required_wikilink", f"missing target: {rel(target, vault)}")
             continue
         text = target.read_text(encoding="utf-8")
+        actual_targets = {_wikilink_target(m.group(1), config) for m in WIKILINK_RE.finditer(text)}
         for link in spec.get("links", []) or []:
             link_text = str(link)
-            expected = link_text if link_text.startswith("[[") else f"[[{link_text}]]"
-            if expected in text:
-                add(result, "pass", "required_wikilink", f"{rel(target, vault)} has {expected}")
+            inner = link_text[2:-2] if link_text.startswith("[[") and link_text.endswith("]]" ) else link_text
+            expected_target = _wikilink_target(inner, config)
+            if expected_target in actual_targets:
+                add(result, "pass", "required_wikilink", f"{rel(target, vault)} has target {expected_target}")
             else:
-                add(result, "fail", "required_wikilink", f"{rel(target, vault)} missing {expected}")
-
+                add(result, "fail", "required_wikilink", f"{rel(target, vault)} missing target {expected_target}")
 
 def check_audit(result: CaseResult, vault: Path, spec: dict[str, Any]) -> None:
     if not spec:
@@ -218,7 +259,7 @@ def check_audit(result: CaseResult, vault: Path, spec: dict[str, Any]) -> None:
             add(result, "fail", "audit_min", f"{key}: {count} < {minimum}")
 
 
-def check_review_artifacts(result: CaseResult, vault: Path, spec: dict[str, Any]) -> None:
+def check_review_artifacts(result: CaseResult, vault: Path, spec: dict[str, Any], config: LlmzkConfig) -> None:
     if not spec:
         return
     for group_name, items in spec.items():
@@ -227,7 +268,7 @@ def check_review_artifacts(result: CaseResult, vault: Path, spec: dict[str, Any]
         for item in items:
             pattern = str(item.get("glob", ""))
             min_count = int(item.get("min", 1))
-            matches = glob_matches(vault, pattern)
+            matches = glob_matches(vault, pattern, config)
             if len(matches) >= min_count:
                 add(result, "pass", f"artifact_{group_name}", f"{pattern} matched {len(matches)}")
             else:
@@ -248,6 +289,7 @@ def check_review_artifacts(result: CaseResult, vault: Path, spec: dict[str, Any]
 
 
 def run_case(case_file: Path, vault: Path) -> CaseResult:
+    config = load_config(vault)
     data = read_yaml(case_file)
     result = CaseResult(name=str(data.get("name") or case_file.parent.name))
     checks = data.get("checks") or {}
@@ -255,13 +297,13 @@ def run_case(case_file: Path, vault: Path) -> CaseResult:
         add(result, "fail", "schema", "checks must be a mapping")
         return result
 
-    check_required_files(result, vault, [str(x) for x in checks.get("required_files", []) or []])
-    check_forbidden_files(result, vault, [str(x) for x in checks.get("forbidden_files", []) or []])
-    check_required_globs(result, vault, checks.get("required_globs", []) or [])
-    check_required_text(result, vault, checks.get("required_text", []) or [])
-    check_forbidden_text(result, vault, checks.get("forbidden_text", []) or [])
-    check_required_wikilinks(result, vault, checks.get("required_wikilinks", []) or [])
-    check_review_artifacts(result, vault, checks.get("review_artifacts", {}) or {})
+    check_required_files(result, vault, [str(x) for x in checks.get("required_files", []) or []], config)
+    check_forbidden_files(result, vault, [str(x) for x in checks.get("forbidden_files", []) or []], config)
+    check_required_globs(result, vault, checks.get("required_globs", []) or [], config)
+    check_required_text(result, vault, checks.get("required_text", []) or [], config)
+    check_forbidden_text(result, vault, checks.get("forbidden_text", []) or [], config)
+    check_required_wikilinks(result, vault, checks.get("required_wikilinks", []) or [], config)
+    check_review_artifacts(result, vault, checks.get("review_artifacts", {}) or {}, config)
     check_audit(result, vault, checks.get("audit", {}) or {})
 
     for item in data.get("manual_rubric", []) or []:
@@ -294,8 +336,7 @@ def results_to_json(results: list[CaseResult]) -> list[dict[str, Any]]:
 
 
 def run(
-    benchmark_path: Path,
-    /,    
+    benchmark_path: tyro.conf.Positional[Path],
     vault: Path = Path("."),
     json: bool = False,
     fail_on_warn: bool = False,

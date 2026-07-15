@@ -114,3 +114,8 @@ candidate_review: "Logs/Candidate Reviews/2026-07-13-example-candidate-review.md
 Bridge and contradiction/tension candidates must still pass `high_judgement_notes_protocol.md`.
 
 Weak bridge or contradiction candidates should be unchecked by default and explained under `Deliberately not created` or reviewer notes.
+
+
+## Review profile critique
+
+Before `/llmzk-write-approved`, the user may run `/llmzk-review-candidates <candidate-review-file>`. This uses the review operating profile: critique the proposal, flag weak or missing candidates, and suggest checkbox edits without writing durable notes.
