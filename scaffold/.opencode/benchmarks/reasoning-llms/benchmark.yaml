@@ -1,0 +1,62 @@
+name: Reasoning LLMs ingest
+description: Checks modern technical article ingest, avoiding product/model stubs, and preserving useful scaling/distillation tensions.
+checks:
+  required_files:
+    - "01 Sources/Source - Understanding Reasoning LLMs.md"
+    - "02 Literature Notes/Literature - Understanding Reasoning LLMs.md"
+    - "04 Concept Notes/Reasoning model.md"
+    - "04 Concept Notes/Inference-time scaling.md"
+    - "04 Concept Notes/Model distillation.md"
+    - "04 Concept Notes/Verifiable rewards.md"
+    - "04 Concept Notes/Journey learning.md"
+    - "03 Permanent Notes/Distillation propagates reasoning capability rather than creating frontier capability.md"
+    - "06 Contradiction Notes/Inference-time scaling trades reasoning quality against deployment cost.md"
+    - "07 Index Notes/Index - Reasoning LLMs.md"
+  forbidden_files:
+    - "04 Concept Notes/Sebastian Raschka.md"
+    - "04 Concept Notes/OpenAI o1.md"
+    - "04 Concept Notes/OpenAI o3.md"
+    - "04 Concept Notes/DeepSeek R1.md"
+    - "04 Concept Notes/QwQ.md"
+  required_text:
+    - path: "06 Contradiction Notes/Inference-time scaling trades reasoning quality against deployment cost.md"
+      contains_any:
+        - "deployment cost"
+        - "inference cost"
+    - path: "03 Permanent Notes/Distillation propagates reasoning capability rather than creating frontier capability.md"
+      contains_any:
+        - "stronger teacher"
+        - "teacher model"
+        - "rather than creating frontier capability"
+  forbidden_text:
+    - glob: "03 Permanent Notes/*.md"
+      contains:
+        - "cannot produce the next generation of reasoning models"
+    - glob: "06 Contradiction Notes/*.md"
+      contains:
+        - "cannot produce the next generation of reasoning models"
+  required_wikilinks:
+    - path: "07 Index Notes/Index - Reasoning LLMs.md"
+      links:
+        - "04 Concept Notes/Inference-time scaling|Inference-time scaling"
+        - "04 Concept Notes/Model distillation|Model distillation"
+  review_artifacts:
+    candidate_reviews:
+      - glob: "Logs/Candidate Reviews/*reasoning*llms*candidate-review.md"
+        status: applied
+    decision_logs:
+      - glob: "Logs/Decision Logs/*reasoning*llms*.md"
+    passports:
+      - glob: "Logs/Passports/*reasoning*llms*.yaml"
+  audit:
+    zero:
+      - unresolved-links
+      - ambiguous-links
+      - bad-link-formatting
+      - frontmatter-issues
+      - math-formatting
+      - missing-source-trail
+      - empty-index-notes
+manual_rubric:
+  - "Contradiction notes should preserve genuine deployment/research trade-offs rather than model-brand comparisons."
+  - "Distillation claim should be softened to dependency on stronger teachers rather than an absolute impossibility claim."

@@ -1,6 +1,6 @@
 [project]
 name = "llmzk-tools"
-version = "0.5.3.3"
+version = "0.5.4"
 description = "Deterministic utilities for an installed llmzk OpenCode/Obsidian vault"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,6 +12,7 @@ dependencies = [
 
 [project.scripts]
 llmzk-audit = "llmzk_tools.audit:main"
+llmzk-benchmark = "llmzk_tools.benchmark:main"
 llmzk-doctor = "llmzk_tools.doctor:main"
 llmzk-fix-frontmatter = "llmzk_tools.fix_frontmatter:main"
 llmzk-git-safety = "llmzk_tools.git_safety:main"

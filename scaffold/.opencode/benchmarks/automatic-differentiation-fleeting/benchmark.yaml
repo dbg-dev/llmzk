@@ -1,0 +1,64 @@
+name: Automatic differentiation fleeting-note promotion
+description: Checks AD vocabulary promotion, duplicate-title disambiguation, and AD/backpropagation bridge quality.
+checks:
+  required_files:
+    - "04 Concept Notes/Automatic differentiation.md"
+    - "04 Concept Notes/Forward mode automatic differentiation.md"
+    - "04 Concept Notes/Reverse mode automatic differentiation.md"
+    - "04 Concept Notes/Jacobian-Vector Product (JVP).md"
+    - "04 Concept Notes/Vector-Jacobian Product (VJP).md"
+    - "04 Concept Notes/Dual numbers.md"
+    - "05 Bridge Notes/Neuron error delta is the cotangent of the weighted input.md"
+    - "05 Bridge Notes/Backpropagation is reverse-mode automatic differentiation specialised to layered networks.md"
+    - "06 Contradiction Notes/Forward mode is efficient for few inputs to many outputs while reverse mode is efficient for many inputs to few outputs.md"
+    - "07 Index Notes/Index - Automatic differentiation.md"
+  forbidden_files:
+    - "04 Concept Notes/Tape.md"
+    - "04 Concept Notes/Computational graph.md"
+    - "04 Concept Notes/Symbolic differentiation.md"
+    - "04 Concept Notes/Optimizers.md"
+  required_text:
+    - path: "04 Concept Notes/Automatic differentiation.md"
+      contains:
+        - "[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"
+    - path: "04 Concept Notes/Jacobian-Vector Product (JVP).md"
+      contains:
+        - "[[00 Fleeting Notes/Jacobian-Vector Product (JVP)|Jacobian-Vector Product (JVP)]]"
+    - path: "05 Bridge Notes/Neuron error delta is the cotangent of the weighted input.md"
+      contains_any:
+        - "cotangent"
+        - "adjoint"
+        - "weighted input"
+  forbidden_text:
+    - glob: "**/*.md"
+      contains:
+        - "[[test/04 Concept Notes/Automatic differentiation]]"
+        - "Jacobian-Vector Product (JJP)"
+  required_wikilinks:
+    - path: "07 Index Notes/Index - Automatic differentiation.md"
+      links:
+        - "04 Concept Notes/Automatic differentiation|Automatic differentiation"
+        - "04 Concept Notes/Jacobian-Vector Product (JVP)"
+        - "04 Concept Notes/Vector-Jacobian Product (VJP)"
+  review_artifacts:
+    candidate_reviews:
+      - glob: "Logs/Candidate Reviews/*automatic*differentiation*candidate-review.md"
+        status: applied
+    decision_logs:
+      - glob: "Logs/Decision Logs/*automatic*differentiation*.md"
+    passports:
+      - glob: "Logs/Passports/*automatic*differentiation*.yaml"
+  audit:
+    zero:
+      - unresolved-links
+      - ambiguous-links
+      - bad-link-formatting
+      - frontmatter-issues
+      - math-formatting
+      - missing-source-trail
+      - empty-index-notes
+    max:
+      duplicate-note-titles: 20
+manual_rubric:
+  - "AD/backpropagation bridge should map Nielsen delta to cotangent/adjoint language, not only say backpropagation is related to AD."
+  - "Forward/reverse contradiction should state the input-output dimensionality trade-off."

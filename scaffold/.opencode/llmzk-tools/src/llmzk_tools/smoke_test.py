@@ -8,6 +8,7 @@ from llmzk_tools.normalize_links import normalize_text
 from llmzk_tools.audit import audit
 from llmzk_tools.fix_frontmatter import fix_text
 from llmzk_tools.review import Normalize, run_normalize, validate_review
+from llmzk_tools.benchmark import run_case
 
 
 def test_normalize_links():
@@ -261,6 +262,30 @@ modified: 2026-07-13 13:53:59+01:00
         assert '- "00 Inbox/example.md"' in text
 
 
+
+def test_benchmark_required_and_forbidden_files():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        case_dir = root / "case"
+        vault = root / "vault"
+        (case_dir).mkdir()
+        (vault / "04 Concept Notes").mkdir(parents=True)
+        (vault / "04 Concept Notes" / "Expected.md").write_text("# Expected\nimportant phrase\n", encoding="utf-8")
+        (case_dir / "benchmark.yaml").write_text("""name: Smoke benchmark
+checks:
+  required_files:
+    - "04 Concept Notes/Expected.md"
+  forbidden_files:
+    - "04 Concept Notes/Forbidden.md"
+  required_text:
+    - path: "04 Concept Notes/Expected.md"
+      contains:
+        - "important phrase"
+""", encoding="utf-8")
+        result = run_case(case_dir / "benchmark.yaml", vault)
+        assert result.failed == 0, result.findings
+        assert result.passed >= 3, result.findings
+
 def main() -> int:
     test_normalize_links()
     test_normalize_ignores_code_fences()
@@ -276,6 +301,7 @@ def main() -> int:
     test_normalize_ambiguous_duplicate_link_prefers_durable_path()
     test_candidate_review_validate()
     test_candidate_review_normalize()
+    test_benchmark_required_and_forbidden_files()
     print("Smoke test passed.")
     return 0
 

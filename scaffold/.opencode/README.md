@@ -30,3 +30,7 @@ The wrapper invokes console scripts from `.opencode/llmzk-tools`, whose CLIs use
 ## Candidate review gate
 
 `/llmzk-ingest` and `/llmzk-promote` create candidate review files first. Durable notes are written only by `/llmzk-write-approved <candidate-review-file>`.
+
+## Benchmarks
+
+Run `.opencode/bin/llmzk benchmark .opencode/benchmarks --vault .` to check an existing generated vault against deterministic regression expectations.

@@ -7,6 +7,7 @@ Usage: .opencode/bin/llmzk <command> [args]
 
 Commands:
   audit                 Run vault audit
+  benchmark             Run regression benchmark expectations
   doctor                Check installed vault health
   fix-frontmatter       Normalize frontmatter link-list fields
   normalize-links       Normalize wikilinks outside code fences
@@ -19,6 +20,7 @@ Commands:
 
 Examples:
   .opencode/bin/llmzk audit .
+  .opencode/bin/llmzk benchmark .opencode/benchmarks --vault .
   .opencode/bin/llmzk doctor .
   .opencode/bin/llmzk git preflight .
   .opencode/bin/llmzk git diff . --stat
@@ -78,6 +80,9 @@ shift
 case "$cmd" in
   audit)
     run_tool llmzk-audit "$@"
+    ;;
+  benchmark)
+    run_tool llmzk-benchmark "$@"
     ;;
   doctor)
     run_tool llmzk-doctor "$@"

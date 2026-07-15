@@ -1,0 +1,61 @@
+name: Nielsen backpropagation ingest
+description: Checks mathematical source ingest, backpropagation concepts, finite-difference wording, and review artifacts.
+checks:
+  required_files:
+    - "01 Sources/Source - Nielsen backpropagation.md"
+    - "02 Literature Notes/Literature - Nielsen backpropagation.md"
+    - "04 Concept Notes/Backpropagation.md"
+    - "04 Concept Notes/Weighted input.md"
+    - "04 Concept Notes/Neuron error delta.md"
+    - "04 Concept Notes/Hadamard product.md"
+    - "04 Concept Notes/Four fundamental equations of backpropagation.md"
+    - "05 Bridge Notes/Weighted input makes neuron error a local chain-rule variable.md"
+    - "06 Contradiction Notes/Finite differences scale with parameter count while backpropagation computes all gradients in one backward pass.md"
+    - "07 Index Notes/Index - Backpropagation.md"
+  forbidden_files:
+    - "04 Concept Notes/Michael A. Nielsen.md"
+    - "04 Concept Notes/Sigmoid function.md"
+    - "04 Concept Notes/Chain rule.md"
+    - "04 Concept Notes/Gradient descent.md"
+  required_text:
+    - path: "06 Contradiction Notes/Finite differences scale with parameter count while backpropagation computes all gradients in one backward pass.md"
+      contains_any:
+        - "one extra forward pass per parameter"
+        - "small constant multiple of the forward pass"
+        - "rather than being multiplied by the number of parameters"
+    - path: "04 Concept Notes/Four fundamental equations of backpropagation.md"
+      contains_any:
+        - "differentiable elementwise activation"
+        - "elementwise Hadamard form"
+  forbidden_text:
+    - glob: "**/*.md"
+      contains:
+        - "exponentially worse"
+        - "cost is independent of the number of parameters"
+        - "any activation function, not just the sigmoid"
+  required_wikilinks:
+    - path: "07 Index Notes/Index - Backpropagation.md"
+      links:
+        - "04 Concept Notes/Backpropagation|Backpropagation"
+        - "Neuron error delta"
+        - "Weighted input makes neuron error a local chain-rule variable"
+  review_artifacts:
+    candidate_reviews:
+      - glob: "Logs/Candidate Reviews/*nielsen*backpropagation*candidate-review.md"
+        status: applied
+    decision_logs:
+      - glob: "Logs/Decision Logs/*nielsen*backpropagation*.md"
+    passports:
+      - glob: "Logs/Passports/*nielsen*backpropagation*.yaml"
+  audit:
+    zero:
+      - unresolved-links
+      - ambiguous-links
+      - bad-link-formatting
+      - frontmatter-issues
+      - math-formatting
+      - missing-source-trail
+      - empty-index-notes
+manual_rubric:
+  - "Bridge note should capture why weighted input z is the right local chain-rule variable, not merely say weighted input is used in backpropagation."
+  - "Contradiction note should present finite differences vs backpropagation as a real computational trade-off."

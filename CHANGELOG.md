@@ -1,5 +1,13 @@
 # Changelog
 
+## v5.4
+
+- Added deterministic regression benchmark tool: `llmzk-benchmark`.
+- Added `/llmzk-benchmark` OpenCode command and wrapper support: `.opencode/bin/llmzk benchmark`.
+- Added installed benchmark cases for Nielsen backpropagation, AD fleeting-note promotion, and reasoning LLMs.
+- Added benchmark documentation under `.opencode/docs/BENCHMARKS.md`.
+- Benchmarks check required/forbidden notes, audit cleanliness, candidate-review/decision-log/passport traces, known bad wording, and high-judgement manual rubrics.
+
 ## v5.3.3 — path-qualified link audit and duplicate-title cleanup
 
 - Fixed audit resolution for path-qualified wikilinks: links with slashes now must resolve as exact vault-relative paths.

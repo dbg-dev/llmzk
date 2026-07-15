@@ -34,3 +34,7 @@ The CLIs use `tyro`. Git-facing operations use `GitPython`.
 - Audit resolver no longer uses `Path.stem` on raw wikilink targets.
 - Review Queue audit reports are regenerated each run.
 - Candidate review mark command normalises YAML booleans and ISO timestamps.
+
+## Benchmark
+
+`llmzk-benchmark` checks an existing vault against benchmark YAML files. It does not run an LLM.
