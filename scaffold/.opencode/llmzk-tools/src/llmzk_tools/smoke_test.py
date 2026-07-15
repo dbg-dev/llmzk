@@ -327,6 +327,34 @@ def test_benchmark_prefix_paths_are_canonicalized():
         result = run_case(case_dir / "benchmark.yaml", vault)
         assert result.failed == 0, result.findings
 
+
+def test_benchmark_globs_skip_directories_and_git_paths():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        case_dir = root / "case"
+        vault = root / "vault"
+        case_dir.mkdir()
+        (vault / "04 Concept Notes").mkdir(parents=True)
+        (vault / "04 Concept Notes" / "Expected.md").write_text("# Expected\nclean text\n", encoding="utf-8")
+        (vault / ".git" / "objects").mkdir(parents=True)
+        (vault / ".git" / "objects" / "ignored.md").write_text("forbidden phrase\n", encoding="utf-8")
+        (vault / ".venv" / "lib").mkdir(parents=True)
+        (vault / ".venv" / "lib" / "ignored.md").write_text("forbidden phrase\n", encoding="utf-8")
+        (case_dir / "benchmark.yaml").write_text("""name: Glob hygiene benchmark
+checks:
+  forbidden_text:
+    - glob: "**/*"
+      contains:
+        - "forbidden phrase"
+  required_text:
+    - glob: "**/*"
+      contains:
+        - "clean text"
+""", encoding="utf-8")
+        result = run_case(case_dir / "benchmark.yaml", vault)
+        assert result.failed == 0, result.findings
+        assert result.passed >= 2, result.findings
+
 def main() -> int:
     test_normalize_links()
     test_normalize_ignores_code_fences()
@@ -345,6 +373,7 @@ def main() -> int:
     test_candidate_review_normalize()
     test_benchmark_required_and_forbidden_files()
     test_benchmark_prefix_paths_are_canonicalized()
+    test_benchmark_globs_skip_directories_and_git_paths()
     print("Smoke test passed.")
     return 0
 

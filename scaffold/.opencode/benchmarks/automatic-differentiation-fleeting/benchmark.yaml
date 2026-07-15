@@ -5,8 +5,8 @@ checks:
     - "04 Concept Notes/Automatic differentiation.md"
     - "04 Concept Notes/Forward mode automatic differentiation.md"
     - "04 Concept Notes/Reverse mode automatic differentiation.md"
-    - "04 Concept Notes/Jacobian-Vector Product (JVP).md"
-    - "04 Concept Notes/Vector-Jacobian Product (VJP).md"
+    - "04 Concept Notes/Jacobian-Vector Product.md"
+    - "04 Concept Notes/Vector-Jacobian Product.md"
     - "04 Concept Notes/Dual numbers.md"
     - "05 Bridge Notes/Neuron error delta is the cotangent of the weighted input.md"
     - "05 Bridge Notes/Backpropagation is reverse-mode automatic differentiation specialised to layered networks.md"
@@ -21,9 +21,9 @@ checks:
     - path: "04 Concept Notes/Automatic differentiation.md"
       contains:
         - "[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"
-    - path: "04 Concept Notes/Jacobian-Vector Product (JVP).md"
+    - path: "04 Concept Notes/Jacobian-Vector Product.md"
       contains:
-        - "[[00 Fleeting Notes/Jacobian-Vector Product (JVP)|Jacobian-Vector Product (JVP)]]"
+        - "[[00 Fleeting Notes/Jacobian-Vector Product]]"
     - path: "05 Bridge Notes/Neuron error delta is the cotangent of the weighted input.md"
       contains_any:
         - "cotangent"
@@ -38,8 +38,8 @@ checks:
     - path: "07 Index Notes/Index - Automatic differentiation.md"
       links:
         - "04 Concept Notes/Automatic differentiation|Automatic differentiation"
-        - "04 Concept Notes/Jacobian-Vector Product (JVP)"
-        - "04 Concept Notes/Vector-Jacobian Product (VJP)"
+        - "04 Concept Notes/Jacobian-Vector Product"
+        - "04 Concept Notes/Vector-Jacobian Product"
   review_artifacts:
     candidate_reviews:
       - glob: "Logs/Candidate Reviews/*automatic*differentiation*candidate-review.md"

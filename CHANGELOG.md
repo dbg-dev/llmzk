@@ -1,5 +1,12 @@
 # Changelog
 
+## v5.5.3 - Benchmark glob hygiene
+
+- Fixed benchmark globs so broad patterns only return readable files.
+- Excluded directories, `.git`, `.venv`, cache folders, `node_modules`, and macOS metadata from benchmark glob matches.
+- Prevented text/artifact checks from calling `read_text()` on directories or repository internals.
+- Added a smoke test for broad benchmark globs such as `**/*`.
+
 ## v5.5.2 - CLI positional-argument ergonomics
 
 - Mark vault paths, review files, benchmark paths, passports, and new-run arguments as Tyro positional arguments.

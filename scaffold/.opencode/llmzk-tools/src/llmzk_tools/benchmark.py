@@ -109,8 +109,30 @@ def path_exists(vault: Path, item: str, config: LlmzkConfig) -> bool:
     return resolve_item(vault, item, config).exists()
 
 
+IGNORED_GLOB_PARTS = {".git", ".hg", ".svn", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", "node_modules"}
+
+
+def ignored_benchmark_path(path: Path) -> bool:
+    """Return True for paths benchmark globs should never read.
+
+    Benchmark globs are for checking generated vault files. Broad patterns such
+    as `**/*.md` must not descend into Git internals, virtual environments,
+    macOS metadata, or directories. Returning only regular files prevents
+    `Path.read_text()` from being called on directories matched by broad globs.
+    """
+    if any(part in IGNORED_GLOB_PARTS for part in path.parts):
+        return True
+    if "__MACOSX" in path.parts:
+        return True
+    if path.name.startswith("._"):
+        return True
+    return False
+
+
 def glob_matches(vault: Path, pattern: str, config: LlmzkConfig) -> list[Path]:
-    # pathlib glob is enough for normal glob patterns, but filter out macOS metadata.
+    # pathlib glob is enough for normal glob patterns. Keep the output restricted
+    # to readable files so text checks and artifact checks never try read_text()
+    # on directories, .git paths, virtualenv files, or macOS metadata.
     patterns = [str(pattern)]
     canonical = canonical_item(str(pattern), config)
     if canonical not in patterns:
@@ -119,7 +141,9 @@ def glob_matches(vault: Path, pattern: str, config: LlmzkConfig) -> list[Path]:
     out: list[Path] = []
     for pat in patterns:
         for p in vault.glob(pat):
-            if "__MACOSX" in p.parts or p.name.startswith("._"):
+            if ignored_benchmark_path(p):
+                continue
+            if not p.is_file():
                 continue
             if p not in seen:
                 seen.add(p)
@@ -162,7 +186,8 @@ def check_required_globs(result: CaseResult, vault: Path, items: list[dict[str, 
 
 def text_targets(vault: Path, spec: dict[str, Any], config: LlmzkConfig) -> list[Path]:
     if "path" in spec:
-        return [resolve_item(vault, str(spec["path"]), config)]
+        target = resolve_item(vault, str(spec["path"]), config)
+        return [] if ignored_benchmark_path(target) or not target.is_file() else [target]
     if "glob" in spec:
         return glob_matches(vault, str(spec["glob"]), config)
     return []
