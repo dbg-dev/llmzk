@@ -2,14 +2,34 @@ name: Reasoning LLMs ingest
 description: Checks modern technical article ingest, avoiding product/model stubs, and preserving useful scaling/distillation tensions.
 checks:
   required_files:
-    - "01 Sources/Source - Understanding Reasoning LLMs.md"
-    - "02 Literature Notes/Literature - Understanding Reasoning LLMs.md"
+    - role: reasoning_source
+      path_any_of:
+        - "01 Sources/Source - Understanding Reasoning LLMs.md"
+        - "01 Sources/Source - Raschka reasoning LLMs.md"
+    - role: reasoning_literature
+      path_any_of:
+        - "02 Literature Notes/Literature - Understanding Reasoning LLMs.md"
+        - "02 Literature Notes/Literature - Raschka reasoning LLMs.md"
     - "04 Concept Notes/Reasoning model.md"
     - "04 Concept Notes/Inference-time scaling.md"
-    - "04 Concept Notes/Model distillation.md"
-    - "04 Concept Notes/Verifiable rewards.md"
-    - "04 Concept Notes/Journey learning.md"
-    - "03 Permanent Notes/Distillation propagates reasoning capability rather than creating frontier capability.md"
+    - role: distillation_concept
+      path_any_of:
+        - "04 Concept Notes/Model distillation.md"
+        - "04 Concept Notes/LLM distillation.md"
+    - role: verifiable_reward_concept
+      path_any_of:
+        - "04 Concept Notes/Verifiable rewards.md"
+        - "04 Concept Notes/Verifiable reward.md"
+    - role: journey_learning_concept
+      path_any_of:
+        - "04 Concept Notes/Journey learning.md"
+        - "04 Concept Notes/Journey Learning.md"
+    - role: distillation_dependency_claim
+      path_any_of:
+        - "03 Permanent Notes/Distillation propagates reasoning capability rather than creating frontier capability.md"
+        - "03 Permanent Notes/Distillation is cheap and effective for small models but depends on stronger teacher models.md"
+        - "03 Permanent Notes/Distillation is more effective than pure RL for smaller models.md"
+        - "06 Contradiction Notes/Distillation is cheap and effective for small models but depends on stronger teacher models.md"
     - "06 Contradiction Notes/Inference-time scaling trades reasoning quality against deployment cost.md"
     - "07 Index Notes/Index - Reasoning LLMs.md"
   forbidden_files:
@@ -23,11 +43,18 @@ checks:
       contains_any:
         - "deployment cost"
         - "inference cost"
-    - path: "03 Permanent Notes/Distillation propagates reasoning capability rather than creating frontier capability.md"
+    - role: distillation_dependency_claim
+      path_any_of:
+        - "03 Permanent Notes/Distillation propagates reasoning capability rather than creating frontier capability.md"
+        - "03 Permanent Notes/Distillation is cheap and effective for small models but depends on stronger teacher models.md"
+        - "03 Permanent Notes/Distillation is more effective than pure RL for smaller models.md"
+        - "06 Contradiction Notes/Distillation is cheap and effective for small models but depends on stronger teacher models.md"
+      target_mode: any
       contains_any:
         - "stronger teacher"
         - "teacher model"
         - "rather than creating frontier capability"
+        - "depends on stronger teacher models"
   forbidden_text:
     - glob: "03 Permanent Notes/*.md"
       contains:
@@ -39,15 +66,23 @@ checks:
     - path: "07 Index Notes/Index - Reasoning LLMs.md"
       links:
         - "04 Concept Notes/Inference-time scaling|Inference-time scaling"
-        - "04 Concept Notes/Model distillation|Model distillation"
+        - target_any_of:
+            - "04 Concept Notes/Model distillation|Model distillation"
+            - "04 Concept Notes/LLM distillation|LLM distillation"
   review_artifacts:
     candidate_reviews:
-      - glob: "Logs/Candidate Reviews/*reasoning*llms*candidate-review.md"
+      - glob_any_of:
+          - "Logs/Candidate Reviews/*reasoning*llms*candidate-review.md"
+          - "Logs/Candidate Reviews/*raschka*reasoning*candidate-review.md"
         status: applied
     decision_logs:
-      - glob: "Logs/Decision Logs/*reasoning*llms*.md"
+      - glob_any_of:
+          - "Logs/Decision Logs/*reasoning*llms*.md"
+          - "Logs/Decision Logs/*raschka*reasoning*.md"
     passports:
-      - glob: "Logs/Passports/*reasoning*llms*.yaml"
+      - glob_any_of:
+          - "Logs/Passports/*reasoning*llms*.yaml"
+          - "Logs/Passports/*raschka*reasoning*.yaml"
   audit:
     zero:
       - unresolved-links

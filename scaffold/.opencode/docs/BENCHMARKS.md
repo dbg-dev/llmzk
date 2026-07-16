@@ -93,6 +93,75 @@ checks:
       - frontmatter-issues
 ```
 
+
+## Semantic matching and aliases
+
+Benchmarks should test roles and behaviours, not one brittle filename when several
+valid titles are acceptable. Use alias-aware fields for notes whose title may
+reasonably vary between model runs:
+
+```yaml
+checks:
+  required_files:
+    - role: forward_mode_ad
+      path_any_of:
+        - "04 Concept Notes/Forward-mode automatic differentiation.md"
+        - "04 Concept Notes/Forward mode automatic differentiation.md"
+
+  required_text:
+    - role: distillation_claim
+      path_any_of:
+        - "03 Permanent Notes/Distillation propagates reasoning capability rather than creating frontier capability.md"
+        - "03 Permanent Notes/Distillation is cheap and effective for small models but depends on stronger teacher models.md"
+      target_mode: any
+      contains_any:
+        - "stronger teacher"
+        - "teacher model"
+
+  required_wikilinks:
+    - path: "07 Index Notes/Index - Reasoning LLMs.md"
+      links:
+        - target_any_of:
+            - "04 Concept Notes/Model distillation|Model distillation"
+            - "04 Concept Notes/LLM distillation|LLM distillation"
+
+  review_artifacts:
+    candidate_reviews:
+      - glob_any_of:
+          - "Logs/Candidate Reviews/*automatic*differentiation*candidate-review.md"
+          - "Logs/Candidate Reviews/*ad*cluster*candidate-review.md"
+        status: applied
+```
+
+Supported alias fields:
+
+- `path_any_of`: any one path may satisfy a required file or text target.
+- `glob_any_of`: any one glob family may satisfy an artifact or glob check.
+- `target_any_of`: any one wikilink target may satisfy an index/provenance link.
+- `role`: human-readable label for a semantic expectation.
+- `target_mode: any`: for aliased text checks, at least one matching target must
+  satisfy the text condition instead of every alias target needing to do so.
+
+Use these sparingly. Aliases are for genuinely equivalent notes, not for hiding
+missing concepts.
+
+## Excluding provenance/log folders from broad text checks
+
+Broad text checks can exclude non-durable provenance folders such as `Logs/`:
+
+```yaml
+forbidden_text:
+  - glob: "**/*.md"
+    exclude:
+      - "Logs"
+    contains:
+      - "known bad durable-note wording"
+```
+
+Candidate reviews and decision logs can mention rejected wording or reviewer
+rationale. Keep durable-note wording checks focused on durable notes unless the
+case is explicitly testing log hygiene.
+
 ## Manual rubric
 
 A case may include `manual_rubric` items. These are printed as warnings and are

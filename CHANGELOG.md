@@ -1,5 +1,13 @@
 # Changelog
 
+## v5.5.4 - Semantic benchmark matching
+
+- Added alias-aware benchmark expectations: `path_any_of`, `glob_any_of`, and `target_any_of`.
+- Added `role` labels and `target_mode: any` for semantic checks where several filenames are acceptable.
+- Added `exclude`/`exclude_globs` support for broad text checks, so durable-note wording checks can ignore provenance logs.
+- Updated installed benchmark cases to avoid hard-coding one exact note title when generated alternatives are substantively equivalent.
+- Kept benchmarks read-only: they still check existing vault output and do not call an LLM or rewrite notes.
+
 ## v5.5.3 - Benchmark glob hygiene
 
 - Fixed benchmark globs so broad patterns only return readable files.

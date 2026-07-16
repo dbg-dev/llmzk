@@ -6,11 +6,24 @@ checks:
     - "02 Literature Notes/Literature - Nielsen backpropagation.md"
     - "04 Concept Notes/Backpropagation.md"
     - "04 Concept Notes/Weighted input.md"
-    - "04 Concept Notes/Neuron error delta.md"
+    - role: neuron_error_concept
+      path_any_of:
+        - "04 Concept Notes/Neuron error delta.md"
+        - "04 Concept Notes/Neuron error.md"
     - "04 Concept Notes/Hadamard product.md"
     - "04 Concept Notes/Four fundamental equations of backpropagation.md"
-    - "05 Bridge Notes/Weighted input makes neuron error a local chain-rule variable.md"
-    - "06 Contradiction Notes/Finite differences scale with parameter count while backpropagation computes all gradients in one backward pass.md"
+    - role: weighted_input_error_bridge
+      path_any_of:
+        - "05 Bridge Notes/Weighted input makes neuron error a local chain-rule variable.md"
+        - "05 Bridge Notes/Weighted input makes neuron error a local chain rule variable.md"
+        - "05 Bridge Notes/Defining neuron error as gradient w.r.t. weighted input makes backpropagation algebraically simple.md"
+        - "05 Bridge Notes/Defining error with respect to weighted input makes backpropagation compositional.md"
+        - "05 Bridge Notes/Neuron error delta is the cotangent of the weighted input.md"
+    - role: finite_difference_backprop_tension
+      path_any_of:
+        - "06 Contradiction Notes/Finite differences scale with parameter count while backpropagation computes all gradients in one backward pass.md"
+        - "06 Contradiction Notes/Finite differences are intuitive but scale poorly compared with backpropagation.md"
+        - "06 Contradiction Notes/Finite differences scale with parameter count while backpropagation needs one backward pass.md"
     - "07 Index Notes/Index - Backpropagation.md"
   forbidden_files:
     - "04 Concept Notes/Michael A. Nielsen.md"
@@ -18,18 +31,25 @@ checks:
     - "04 Concept Notes/Chain rule.md"
     - "04 Concept Notes/Gradient descent.md"
   required_text:
-    - path: "06 Contradiction Notes/Finite differences scale with parameter count while backpropagation computes all gradients in one backward pass.md"
+    - role: finite_difference_backprop_tension
+      path_any_of:
+        - "06 Contradiction Notes/Finite differences scale with parameter count while backpropagation computes all gradients in one backward pass.md"
+        - "06 Contradiction Notes/Finite differences are intuitive but scale poorly compared with backpropagation.md"
+        - "06 Contradiction Notes/Finite differences scale with parameter count while backpropagation needs one backward pass.md"
+      target_mode: any
       contains_any:
         - "one extra forward pass per parameter"
         - "small constant multiple of the forward pass"
         - "rather than being multiplied by the number of parameters"
+        - "scales with the number of parameters"
     - path: "04 Concept Notes/Four fundamental equations of backpropagation.md"
       contains_any:
         - "differentiable elementwise activation"
         - "elementwise Hadamard form"
   forbidden_text:
     - glob: "**/*.md"
-      exclude: "Logs"
+      exclude:
+        - "Logs"
       contains:
         - "exponentially worse"
         - "cost is independent of the number of parameters"
@@ -38,8 +58,15 @@ checks:
     - path: "07 Index Notes/Index - Backpropagation.md"
       links:
         - "04 Concept Notes/Backpropagation|Backpropagation"
-        - "Neuron error delta"
-        - "Weighted input makes neuron error a local chain-rule variable"
+        - target_any_of:
+            - "04 Concept Notes/Neuron error delta"
+            - "04 Concept Notes/Neuron error"
+        - target_any_of:
+            - "05 Bridge Notes/Weighted input makes neuron error a local chain-rule variable"
+            - "05 Bridge Notes/Weighted input makes neuron error a local chain rule variable"
+            - "05 Bridge Notes/Defining neuron error as gradient w.r.t. weighted input makes backpropagation algebraically simple"
+            - "05 Bridge Notes/Defining error with respect to weighted input makes backpropagation compositional"
+            - "05 Bridge Notes/Neuron error delta is the cotangent of the weighted input"
   review_artifacts:
     candidate_reviews:
       - glob: "Logs/Candidate Reviews/*nielsen*backpropagation*candidate-review.md"

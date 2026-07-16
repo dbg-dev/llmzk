@@ -355,6 +355,57 @@ checks:
         assert result.failed == 0, result.findings
         assert result.passed >= 2, result.findings
 
+
+def test_benchmark_semantic_aliases_and_excludes():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        case_dir = root / "case"
+        vault = root / "vault"
+        case_dir.mkdir()
+        (vault / "04 Concept Notes").mkdir(parents=True)
+        (vault / "07 Index Notes").mkdir(parents=True)
+        (vault / "Logs" / "Decision Logs").mkdir(parents=True)
+        (vault / "04 Concept Notes" / "Forward-mode automatic differentiation.md").write_text(
+            "# Forward-mode automatic differentiation\n\nUses a JVP.\n", encoding="utf-8"
+        )
+        (vault / "07 Index Notes" / "Index - Automatic differentiation.md").write_text(
+            "# Index\n\n- [[04 Concept Notes/Forward-mode automatic differentiation|Forward-mode AD]]\n",
+            encoding="utf-8",
+        )
+        (vault / "Logs" / "Decision Logs" / "run.md").write_text("forbidden durable wording\n", encoding="utf-8")
+        (case_dir / "benchmark.yaml").write_text("""name: Semantic benchmark
+checks:
+  required_files:
+    - role: forward_mode_ad
+      path_any_of:
+        - "04 Concept Notes/Forward mode automatic differentiation.md"
+        - "04 Concept Notes/Forward-mode automatic differentiation.md"
+  required_text:
+    - role: forward_mode_ad
+      path_any_of:
+        - "04 Concept Notes/Forward mode automatic differentiation.md"
+        - "04 Concept Notes/Forward-mode automatic differentiation.md"
+      target_mode: any
+      contains_any:
+        - "JVP"
+        - "tangent"
+  required_wikilinks:
+    - path: "07 Index Notes/Index - Automatic differentiation.md"
+      links:
+        - target_any_of:
+            - "04 Concept Notes/Forward mode automatic differentiation"
+            - "04 Concept Notes/Forward-mode automatic differentiation"
+  forbidden_text:
+    - glob: "**/*.md"
+      exclude:
+        - "Logs"
+      contains:
+        - "forbidden durable wording"
+""", encoding="utf-8")
+        result = run_case(case_dir / "benchmark.yaml", vault)
+        assert result.failed == 0, result.findings
+        assert result.passed >= 4, result.findings
+
 def main() -> int:
     test_normalize_links()
     test_normalize_ignores_code_fences()
@@ -374,6 +425,7 @@ def main() -> int:
     test_benchmark_required_and_forbidden_files()
     test_benchmark_prefix_paths_are_canonicalized()
     test_benchmark_globs_skip_directories_and_git_paths()
+    test_benchmark_semantic_aliases_and_excludes()
     print("Smoke test passed.")
     return 0
 

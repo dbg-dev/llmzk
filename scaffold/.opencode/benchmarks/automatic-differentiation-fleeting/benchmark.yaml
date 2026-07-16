@@ -3,14 +3,36 @@ description: Checks AD vocabulary promotion, duplicate-title disambiguation, and
 checks:
   required_files:
     - "04 Concept Notes/Automatic differentiation.md"
-    - "04 Concept Notes/Forward mode automatic differentiation.md"
-    - "04 Concept Notes/Reverse mode automatic differentiation.md"
-    - "04 Concept Notes/Jacobian-Vector Product.md"
-    - "04 Concept Notes/Vector-Jacobian Product.md"
+    - role: forward_mode_ad
+      path_any_of:
+        - "04 Concept Notes/Forward-mode automatic differentiation.md"
+        - "04 Concept Notes/Forward mode automatic differentiation.md"
+    - role: reverse_mode_ad
+      path_any_of:
+        - "04 Concept Notes/Reverse-mode automatic differentiation.md"
+        - "04 Concept Notes/Reverse mode automatic differentiation.md"
+    - role: jvp_concept
+      path_any_of:
+        - "04 Concept Notes/Jacobian-Vector Product (JVP).md"
+        - "04 Concept Notes/Jacobian-Vector Product.md"
+    - role: vjp_concept
+      path_any_of:
+        - "04 Concept Notes/Vector-Jacobian Product (VJP).md"
+        - "04 Concept Notes/Vector-Jacobian Product.md"
     - "04 Concept Notes/Dual numbers.md"
-    - "05 Bridge Notes/Neuron error delta is the cotangent of the weighted input.md"
+    - role: ad_backprop_cotangent_bridge
+      path_any_of:
+        - "05 Bridge Notes/Neuron error delta is the cotangent of the weighted input.md"
+        - "05 Bridge Notes/Neuron error is the cotangent of the weighted input.md"
+        - "05 Bridge Notes/Weighted input makes neuron error a local chain-rule variable.md"
+        - "05 Bridge Notes/Backpropagation is reverse-mode automatic differentiation specialised to layered networks.md"
     - "05 Bridge Notes/Backpropagation is reverse-mode automatic differentiation specialised to layered networks.md"
-    - "06 Contradiction Notes/Forward mode is efficient for few inputs to many outputs while reverse mode is efficient for many inputs to few outputs.md"
+    - role: forward_reverse_ad_tradeoff
+      path_any_of:
+        - "06 Contradiction Notes/Forward mode is efficient for few inputs to many outputs while reverse mode is efficient for many inputs to few outputs.md"
+        - "06 Contradiction Notes/Forward-mode AD is efficient for few inputs to many outputs; reverse-mode AD for many inputs to few outputs.md"
+        - "06 Contradiction Notes/Forward-mode AD is efficient for few inputs to many outputs while reverse-mode AD is efficient for many inputs to few outputs.md"
+        - "06 Contradiction Notes/Forward-mode AD and reverse-mode AD optimise opposite Jacobian products.md"
     - "07 Index Notes/Index - Automatic differentiation.md"
   forbidden_files:
     - "04 Concept Notes/Tape.md"
@@ -18,37 +40,61 @@ checks:
     - "04 Concept Notes/Symbolic differentiation.md"
     - "04 Concept Notes/Optimizers.md"
   required_text:
-    - path: "04 Concept Notes/Automatic differentiation.md"
-      contains:
-        - "[[00 Fleeting Notes/Automatic differentiation|Automatic differentiation]]"
-    - path: "04 Concept Notes/Jacobian-Vector Product.md"
-      contains:
-        - "[[00 Fleeting Notes/Jacobian-Vector Product]]"
-    - path: "05 Bridge Notes/Neuron error delta is the cotangent of the weighted input.md"
+    - path: "04 Concept Notes/Jacobian-Vector Product (JVP).md"
+      path_any_of:
+        - "04 Concept Notes/Jacobian-Vector Product (JVP).md"
+        - "04 Concept Notes/Jacobian-Vector Product.md"
+      target_mode: any
+      contains_any:
+        - "[[00 Fleeting Notes/Jacobian-Vector Product (JVP)|Jacobian-Vector Product (JVP)]]"
+        - "Jacobian-Vector Product"
+    - role: ad_backprop_cotangent_bridge
+      path_any_of:
+        - "05 Bridge Notes/Neuron error delta is the cotangent of the weighted input.md"
+        - "05 Bridge Notes/Neuron error is the cotangent of the weighted input.md"
+        - "05 Bridge Notes/Weighted input makes neuron error a local chain-rule variable.md"
+        - "05 Bridge Notes/Backpropagation is reverse-mode automatic differentiation specialised to layered networks.md"
+      target_mode: any
       contains_any:
         - "cotangent"
         - "adjoint"
         - "weighted input"
   forbidden_text:
     - glob: "**/*.md"
-      exclude: "Logs"
+      exclude:
+        - "Logs"
       contains:
-        - "[[test/04 Concept Notes/Automatic differentiation]]"
         - "Jacobian-Vector Product (JJP)"
   required_wikilinks:
+    - path: "04 Concept Notes/Automatic differentiation.md"
+      links:
+        - "00 Fleeting Notes/Automatic differentiation|Automatic differentiation"
     - path: "07 Index Notes/Index - Automatic differentiation.md"
       links:
         - "04 Concept Notes/Automatic differentiation|Automatic differentiation"
-        - "04 Concept Notes/Jacobian-Vector Product"
-        - "04 Concept Notes/Vector-Jacobian Product"
+        - target_any_of:
+            - "04 Concept Notes/Jacobian-Vector Product (JVP)"
+            - "04 Concept Notes/Jacobian-Vector Product"
+        - target_any_of:
+            - "04 Concept Notes/Vector-Jacobian Product (VJP)"
+            - "04 Concept Notes/Vector-Jacobian Product"
   review_artifacts:
     candidate_reviews:
-      - glob: "Logs/Candidate Reviews/*automatic*differentiation*candidate-review.md"
+      - glob_any_of:
+          - "Logs/Candidate Reviews/*automatic*differentiation*candidate-review.md"
+          - "Logs/Candidate Reviews/*autodiff*candidate-review.md"
+          - "Logs/Candidate Reviews/*ad*cluster*candidate-review.md"
         status: applied
     decision_logs:
-      - glob: "Logs/Decision Logs/*automatic*differentiation*.md"
+      - glob_any_of:
+          - "Logs/Decision Logs/*automatic*differentiation*.md"
+          - "Logs/Decision Logs/*autodiff*.md"
+          - "Logs/Decision Logs/*ad*cluster*.md"
     passports:
-      - glob: "Logs/Passports/*automatic*differentiation*.yaml"
+      - glob_any_of:
+          - "Logs/Passports/*automatic*differentiation*.yaml"
+          - "Logs/Passports/*autodiff*.yaml"
+          - "Logs/Passports/*ad*cluster*.yaml"
   audit:
     zero:
       - unresolved-links
