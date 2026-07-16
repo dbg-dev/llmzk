@@ -9,5 +9,6 @@
     ".opencode/docs/GIT_POLICY.md",
     ".opencode/docs/OBSIDIAN_SKILLS.md",
     ".opencode/docs/MULTI_INSTANCE.md"
-  ]
+  ],
+  "lsp": true
 }
