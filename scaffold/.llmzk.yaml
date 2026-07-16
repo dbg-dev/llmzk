@@ -1,5 +1,10 @@
 # llmzk instance configuration
+# If this llmzk instance lives inside a larger Obsidian vault, set
+# vault_relative_prefix to the folder path from the Obsidian vault root.
 schema_version: 1
-instance_name: "root"
+instance_name: root
 vault_relative_prefix: ""
-link_style: "local"
+link_style: local
+installed_version: "0.5.6"
+install_mode: copy
+source_path: ""

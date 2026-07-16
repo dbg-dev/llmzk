@@ -9,6 +9,7 @@ Commands:
   audit                 Run vault audit
   benchmark             Run regression benchmark expectations
   doctor                Check installed vault health
+  update                Report or update installed system layer from upstream scaffold
   fix-frontmatter       Normalize frontmatter link-list fields
   normalize-links       Normalize wikilinks outside code fences
   new-run               Create passport and decision-log placeholders
@@ -22,6 +23,8 @@ Examples:
   .opencode/bin/llmzk audit .
   .opencode/bin/llmzk benchmark .opencode/benchmarks --vault .
   .opencode/bin/llmzk doctor .
+  .opencode/bin/llmzk update . --source /path/to/llmzk
+  .opencode/bin/llmzk update . --source /path/to/llmzk --apply
   .opencode/bin/llmzk git preflight .
   .opencode/bin/llmzk git diff . --stat
   .opencode/bin/llmzk review validate "Logs/Candidate Reviews/example.md"
@@ -87,6 +90,9 @@ case "$cmd" in
     ;;
   doctor)
     run_tool llmzk-doctor "$@"
+    ;;
+  update)
+    run_tool llmzk-update "$@"
     ;;
   fix-frontmatter)
     run_tool llmzk-fix-frontmatter "$@"

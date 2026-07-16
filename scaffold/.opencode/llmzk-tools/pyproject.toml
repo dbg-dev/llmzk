@@ -1,6 +1,6 @@
 [project]
 name = "llmzk-tools"
-version = "0.5.5.4"
+version = "0.5.6"
 description = "Deterministic utilities for an installed llmzk OpenCode/Obsidian vault"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,6 +20,7 @@ llmzk-new-run = "llmzk_tools.new_run:main"
 llmzk-normalize-links = "llmzk_tools.normalize_links:main"
 llmzk-review = "llmzk_tools.review:main"
 llmzk-smoke-test = "llmzk_tools.smoke_test:main"
+llmzk-update = "llmzk_tools.update:main"
 
 [tool.uv]
 package = true

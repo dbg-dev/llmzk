@@ -28,6 +28,9 @@ class LlmzkConfig:
     instance_name: str = "root"
     vault_relative_prefix: str = ""
     link_style: str = "local"  # local | vault_relative
+    installed_version: str = ""
+    install_mode: str = "copy"  # copy | symlink
+    source_path: str = ""
 
     @property
     def prefix(self) -> str:
@@ -113,13 +116,18 @@ def load_config(root: Path) -> LlmzkConfig:
         instance_name=str(data.get("instance_name") or (prefix or "root")),
         vault_relative_prefix=prefix,
         link_style=link_style,
+        installed_version=str(data.get("installed_version") or ""),
+        install_mode=str(data.get("install_mode") or "copy"),
+        source_path=str(data.get("source_path") or ""),
     )
 
 
-def write_config(root: Path, *, instance_name: str, vault_relative_prefix: str = "", link_style: str = "local") -> None:
+def write_config(root: Path, *, instance_name: str, vault_relative_prefix: str = "", link_style: str = "local", installed_version: str = "", install_mode: str = "copy", source_path: str = "") -> None:
     prefix = normalize_prefix(vault_relative_prefix)
     if link_style not in {"local", "vault_relative"}:
         raise ValueError("link_style must be 'local' or 'vault_relative'")
+    if install_mode not in {"copy", "symlink"}:
+        raise ValueError("install_mode must be 'copy' or 'symlink'")
     text = (
         "# llmzk instance configuration\n"
         "# If this llmzk instance lives inside a larger Obsidian vault, set\n"
@@ -128,5 +136,8 @@ def write_config(root: Path, *, instance_name: str, vault_relative_prefix: str =
         f"instance_name: {yaml.safe_dump(str(instance_name), default_flow_style=True).strip()}\n"
         f"vault_relative_prefix: {yaml.safe_dump(prefix, default_flow_style=True).strip()}\n"
         f"link_style: {yaml.safe_dump(link_style, default_flow_style=True).strip()}\n"
+        f"installed_version: {yaml.safe_dump(str(installed_version), default_flow_style=True).strip()}\n"
+        f"install_mode: {yaml.safe_dump(install_mode, default_flow_style=True).strip()}\n"
+        f"source_path: {yaml.safe_dump(str(source_path), default_flow_style=True).strip()}\n"
     )
     (root / ".llmzk.yaml").write_text(text, encoding="utf-8")

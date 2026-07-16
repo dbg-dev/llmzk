@@ -26,6 +26,7 @@ Use copy mode for portability. Symlink mode is convenient on macOS/Linux when it
 --vault-prefix PATH   Obsidian-vault-relative prefix, e.g. AI or test
 --link-style STYLE    local|vault_relative
 --doctor              Run llmzk doctor after install
+--source-path PATH     Record source repo path for future updates
 --no-doctor           Skip llmzk doctor
 --force               Overwrite installed system paths in an existing vault
 ```
@@ -99,3 +100,26 @@ For a path that begins with `-`, use the standard end-of-options separator:
 .opencode/bin/llmzk review validate -- "Logs/Candidate Reviews/-example.md"
 ```
 
+
+
+## Updating an existing installed vault
+
+From the upstream `llmzk` checkout, dry-run first:
+
+```bash
+./scripts/update-vault.sh ~/Vaults/MyResearchVault
+```
+
+Apply only after reviewing the plan:
+
+```bash
+./scripts/update-vault.sh ~/Vaults/MyResearchVault --apply
+```
+
+Copy-mode users get updated copies of `.opencode/` and `Templates/`. Symlink-mode users can repair links and metadata with:
+
+```bash
+./scripts/update-vault.sh ~/Vaults/MyResearchVault --mode symlink --apply
+```
+
+The update workflow avoids durable notes and `Logs/`. Review the resulting Git diff before committing.

@@ -72,3 +72,8 @@ See `.opencode/docs/OPERATING_PROFILES.md` for the careful, review, and fast ins
 ## Multi-instance installs
 
 An llmzk instance may live inside a subfolder of a larger Obsidian vault. In that case `.llmzk.yaml` records the `vault_relative_prefix` and `link_style`. See `.opencode/docs/MULTI_INSTANCE.md`.
+
+
+## Maintenance boundary
+
+Updates operate on the system layer only: `AGENTS.md`, `opencode.json`, `.gitignore`, `.llmzk.yaml` metadata, `.opencode/`, and `Templates/`. Durable note folders and `Logs/` are vault-owned and must not be touched by scaffold updates. See `.opencode/docs/MAINTENANCE.md`.

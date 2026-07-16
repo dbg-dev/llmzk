@@ -1,6 +1,6 @@
 # llmzk
 
-Current version: v5.5.1
+Current version: v5.6
 
 `llmzk` is a lightweight OpenCode + Obsidian harness for building a Zettelkasten with LLM assistance.
 
@@ -64,6 +64,19 @@ An Obsidian vault can contain multiple llmzk instances, for example `Vault/AI/` 
 
 This writes `.llmzk.yaml` so audit, normalize-links, fix-frontmatter, and benchmark can understand Obsidian-vault-relative links such as `[[AI/04 Concept Notes/Automatic differentiation|Automatic differentiation]]`.
 
+
+## Updating an installed vault
+
+From the upstream source checkout, run a dry-run first:
+
+    ./scripts/update-vault.sh ~/Vaults/MyResearchVault
+
+Then apply after reviewing the planned system-layer changes:
+
+    ./scripts/update-vault.sh ~/Vaults/MyResearchVault --apply
+
+Updates are limited to the installed system layer: `AGENTS.md`, `opencode.json`, `.gitignore`, `.llmzk.yaml` metadata, `.opencode/`, and `Templates/`. Durable note folders and `Logs/` are not touched.
+
 ## Git safety
 
 The installed vault is initialized as its own Git repository unless you pass `--no-git`.
@@ -90,6 +103,7 @@ Agents may inspect Git status and diffs, but must not stage, commit, reset, clea
 /llmzk-normalize-links --dry-run
 /llmzk-fix-frontmatter --apply
 /llmzk-doctor
+/llmzk-update
 /llmzk-git-status
 /llmzk-git-preflight
 /llmzk-git-diff

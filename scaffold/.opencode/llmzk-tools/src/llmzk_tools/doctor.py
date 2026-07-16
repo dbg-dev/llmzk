@@ -8,6 +8,9 @@ from typing import Iterable
 from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
 import tyro
 
+from llmzk_tools import __version__
+from llmzk_tools.config import load_config
+
 VAULT_FOLDERS = [
     "00 Inbox",
     "00 Fleeting Notes",
@@ -59,6 +62,7 @@ REQUIRED_COMMANDS = [
     "llmzk-review.md",
     "llmzk-review-candidates.md",
     "llmzk-synthesize.md",
+    "llmzk-update.md",
 ]
 REQUIRED_SKILLS = [
     "llmzk-audit/SKILL.md",
@@ -78,6 +82,7 @@ REQUIRED_DOCS = [
     "OPERATING_PROFILES.md",
     "BENCHMARKS.md",
     "MULTI_INSTANCE.md",
+    "MAINTENANCE.md",
 ]
 REQUIRED_TOOLS = [
     "audit.py",
@@ -90,6 +95,7 @@ REQUIRED_TOOLS = [
     "normalize_links.py",
     "review.py",
     "smoke_test.py",
+    "update.py",
 ]
 REQUIRED_TEMPLATES = [
     "source-note.md",
@@ -261,6 +267,7 @@ def check_tool_project(findings: list[Finding], root: Path) -> None:
         "llmzk-normalize-links",
         "llmzk-review",
         "llmzk-smoke-test",
+        "llmzk-update",
     ]
     for name in required:
         if name in text:
@@ -281,13 +288,46 @@ def check_llmzk_config(findings: list[Finding], root: Path) -> None:
         add(findings, "fail", "Missing llmzk instance config: .llmzk.yaml")
         return
     text = path.read_text(encoding="utf-8")
-    for key in ["schema_version:", "instance_name:", "vault_relative_prefix:", "link_style:"]:
+    required_keys = ["schema_version:", "instance_name:", "vault_relative_prefix:", "link_style:"]
+    metadata_keys = ["installed_version:", "install_mode:", "source_path:"]
+    for key in required_keys:
         if key in text:
             add(findings, "ok", f"llmzk config contains: {key[:-1]}")
         else:
             add(findings, "fail", f"llmzk config missing key: {key[:-1]}")
-    if "link_style: vault_relative" in text and "vault_relative_prefix: """ in text:
+    for key in metadata_keys:
+        if key in text:
+            add(findings, "ok", f"llmzk config contains: {key[:-1]}")
+        else:
+            add(findings, "warn", f"llmzk config missing update metadata: {key[:-1]}")
+    if "link_style: vault_relative" in text and ("vault_relative_prefix: \"\"" in text or "vault_relative_prefix: ''" in text):
         add(findings, "warn", "link_style is vault_relative but vault_relative_prefix is empty")
+    cfg = load_config(root)
+    if not cfg.installed_version:
+        add(findings, "warn", "llmzk config has no installed_version; run llmzk update after upgrading")
+    elif cfg.installed_version != __version__:
+        add(findings, "warn", f"Version mismatch: .llmzk.yaml says {cfg.installed_version}, tools say {__version__}")
+    else:
+        add(findings, "ok", f"llmzk version metadata matches tools: {__version__}")
+    if cfg.install_mode not in {"copy", "symlink"}:
+        add(findings, "warn", f"Unknown install_mode in .llmzk.yaml: {cfg.install_mode}")
+    else:
+        add(findings, "ok", f"Install mode recorded: {cfg.install_mode}")
+    if cfg.install_mode == "symlink":
+        for rel in [".opencode", "Templates"]:
+            path = root / rel
+            if path.is_symlink():
+                add(findings, "ok", f"Symlink install path is a symlink: {rel}")
+            else:
+                add(findings, "warn", f"install_mode is symlink but path is not a symlink: {rel}")
+    if cfg.source_path:
+        source = Path(cfg.source_path).expanduser()
+        if source.exists():
+            add(findings, "ok", f"Recorded source_path exists: {cfg.source_path}")
+        else:
+            add(findings, "warn", f"Recorded source_path does not exist: {cfg.source_path}")
+    else:
+        add(findings, "warn", "No source_path recorded; update needs --source")
 
 def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = False) -> tuple[int, list[Finding]]:
     root = vault.expanduser().resolve()

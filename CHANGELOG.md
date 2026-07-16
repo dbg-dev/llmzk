@@ -1,3 +1,12 @@
+# v5.6 — maintenance and update workflow
+
+- Added `scripts/update-vault.sh` for updating an installed vault from the upstream scaffold.
+- Added `.opencode/bin/llmzk update` / `llmzk-update` for dry-run drift detection and system-layer updates.
+- Added `.opencode/docs/MAINTENANCE.md` with copy-mode and symlink-mode update guidance.
+- Added version/install metadata to `.llmzk.yaml`: `installed_version`, `install_mode`, and `source_path`.
+- Extended doctor checks for version mismatch, install-mode consistency, source-path availability, and update-tool registration.
+- Kept updates limited to system paths; durable notes and `Logs/` are not touched.
+
 # Changelog
 
 ## v5.5.4 - Semantic benchmark matching

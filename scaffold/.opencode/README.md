@@ -10,7 +10,7 @@ agents/         Optional specialist agents
 skills/         llmzk domain skills
 docs/           llmzk operating docs, including operating profiles
 bin/llmzk       Wrapper for deterministic tools
-llmzk-tools/    Python package for audit, doctor, cleanup, candidate review validation, and Git safety
+llmzk-tools/    Python package for audit, doctor, update, cleanup, candidate review validation, and Git safety
 ```
 
 ## Tool wrapper
@@ -20,6 +20,7 @@ Use the wrapper from the vault root:
 ```bash
 .opencode/bin/llmzk audit .
 .opencode/bin/llmzk doctor .
+.opencode/bin/llmzk update . --source /path/to/llmzk
 .opencode/bin/llmzk git preflight .
 .opencode/bin/llmzk git diff . --stat
 .opencode/bin/llmzk review-validate "Logs/Candidate Reviews/example.md"
@@ -64,3 +65,7 @@ For a path that begins with `-`, use the standard end-of-options separator:
 .opencode/bin/llmzk review validate -- "Logs/Candidate Reviews/-example.md"
 ```
 
+
+## Maintenance
+
+See `.opencode/docs/MAINTENANCE.md` for copy-mode and symlink-mode update workflows.

@@ -15,6 +15,7 @@ Options:
   --vault-prefix PATH   Obsidian-vault-relative prefix for this llmzk instance, e.g. AI or test
   --link-style STYLE    local|vault_relative. Default: vault_relative if --vault-prefix is set, else local
   --doctor              Run llmzk doctor after install. Default
+  --source-path PATH     Record source repo path in .llmzk.yaml. Default: this checkout
   --no-doctor           Skip llmzk doctor
   --force               Allow installing into a non-empty vault and overwrite installed system paths
   -h, --help            Show this help
@@ -47,6 +48,7 @@ DO_DOCTOR=1
 FORCE=0
 VAULT_PREFIX=""
 LINK_STYLE=""
+SOURCE_PATH=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -90,6 +92,14 @@ while [[ $# -gt 0 ]]; do
       DO_DOCTOR=1
       shift
       ;;
+    --source-path)
+      SOURCE_PATH="${2:-}"
+      shift 2
+      ;;
+    --source-path=*)
+      SOURCE_PATH="${1#*=}"
+      shift
+      ;;
     --no-doctor)
       DO_DOCTOR=0
       shift
@@ -131,6 +141,10 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [[ -z "$SOURCE_PATH" ]]; then
+  SOURCE_PATH="$REPO_ROOT"
+fi
+SOURCE_PATH="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).expanduser().resolve())' "$SOURCE_PATH")"
 SCAFFOLD="$REPO_ROOT/scaffold"
 VAULT="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).expanduser().resolve())' "$VAULT_PATH")"
 
@@ -150,6 +164,7 @@ mkdir -p "$VAULT"
 echo "llmzk source: $REPO_ROOT"
 echo "Vault: $VAULT"
 echo "Install mode: $MODE"
+echo "Recorded source path: $SOURCE_PATH"
 echo "Link style: $LINK_STYLE"
 if [[ -n "$VAULT_PREFIX" ]]; then
   echo "Vault-relative prefix: $VAULT_PREFIX"
@@ -205,6 +220,9 @@ schema_version: 1
 instance_name: "$INSTANCE_NAME"
 vault_relative_prefix: "$VAULT_PREFIX"
 link_style: "$LINK_STYLE"
+installed_version: "0.5.6"
+install_mode: "$MODE"
+source_path: "$SOURCE_PATH"
 CONFIG
 
 install_dir "$SCAFFOLD/.opencode" "$VAULT/.opencode"
