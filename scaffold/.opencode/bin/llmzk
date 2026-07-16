@@ -15,7 +15,6 @@ Commands:
   new-run               Create passport and decision-log placeholders
   review                Validate, mark, or normalize candidate reviews
   review-validate       Validate a candidate review file
-  smoke-test            Run deterministic tool smoke tests
   git <subcommand>      Run Git safety subcommands
   git-safety <args>     Direct access to llmzk-git-safety
 
@@ -109,9 +108,6 @@ case "$cmd" in
     ;;
   review-validate)
     run_tool llmzk-review validate "$@"
-    ;;
-  smoke-test)
-    run_tool llmzk-smoke-test "$@"
     ;;
   git)
     if [[ $# -eq 0 ]]; then

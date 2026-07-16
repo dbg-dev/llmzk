@@ -19,7 +19,6 @@ llmzk-git-safety = "llmzk_tools.git_safety:main"
 llmzk-new-run = "llmzk_tools.new_run:main"
 llmzk-normalize-links = "llmzk_tools.normalize_links:main"
 llmzk-review = "llmzk_tools.review:main"
-llmzk-smoke-test = "llmzk_tools.smoke_test:main"
 llmzk-update = "llmzk_tools.update:main"
 
 [tool.uv]
@@ -30,6 +29,7 @@ line-length = 100
 
 [dependency-groups]
 dev = [
+    "lint>=1.2.1",
     "pytest>=8.0.0",
     "pytest-cov>=7.1.0",
 ]

@@ -15,7 +15,6 @@ llmzk-fix-frontmatter
 llmzk-git-safety
 llmzk-new-run
 llmzk-normalize-links
-llmzk-smoke-test
 ```
 
 The installed vault normally invokes these through the wrapper:

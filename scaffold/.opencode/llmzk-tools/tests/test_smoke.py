@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import tempfile
@@ -271,7 +270,6 @@ modified: 2026-07-13 13:53:59+01:00
         assert '- "00 Inbox/example.md"' in text
 
 
-
 def test_benchmark_required_and_forbidden_files():
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -405,30 +403,3 @@ checks:
         result = run_case(case_dir / "benchmark.yaml", vault)
         assert result.failed == 0, result.findings
         assert result.passed >= 4, result.findings
-
-def main() -> int:
-    test_normalize_links()
-    test_normalize_ignores_code_fences()
-    test_normalize_links_preserves_frontmatter_paths()
-    test_audit_math_fence()
-    test_fix_frontmatter_nested_lists()
-    test_fix_frontmatter_path_qualifies_origin_trail()
-    test_audit_frontmatter_issues()
-    test_audit_wrt_title_not_truncated()
-    test_audit_duplicate_note_titles()
-    test_audit_path_qualified_links_are_exact()
-    test_normalize_unknown_prefix_is_not_stripped_without_config()
-    test_normalize_configured_vault_prefix_is_preserved()
-    test_normalize_ambiguous_duplicate_link_prefers_durable_path()
-    test_candidate_review_validate()
-    test_candidate_review_normalize()
-    test_benchmark_required_and_forbidden_files()
-    test_benchmark_prefix_paths_are_canonicalized()
-    test_benchmark_globs_skip_directories_and_git_paths()
-    test_benchmark_semantic_aliases_and_excludes()
-    print("Smoke test passed.")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

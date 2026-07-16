@@ -94,7 +94,6 @@ REQUIRED_TOOLS = [
     "new_run.py",
     "normalize_links.py",
     "review.py",
-    "smoke_test.py",
     "update.py",
 ]
 REQUIRED_TEMPLATES = [
@@ -266,7 +265,6 @@ def check_tool_project(findings: list[Finding], root: Path) -> None:
         "llmzk-new-run",
         "llmzk-normalize-links",
         "llmzk-review",
-        "llmzk-smoke-test",
         "llmzk-update",
     ]
     for name in required:
