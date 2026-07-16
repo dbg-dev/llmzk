@@ -29,7 +29,7 @@ line-length = 100
 
 [dependency-groups]
 dev = [
-    "lint>=1.2.1",
+    "ruff>=0.6.0",
     "pytest>=8.0.0",
     "pytest-cov>=7.1.0",
 ]
