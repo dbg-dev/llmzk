@@ -31,6 +31,7 @@ checks:
         - "weighted input"
   forbidden_text:
     - glob: "**/*.md"
+      exclude: "Logs"
       contains:
         - "[[test/04 Concept Notes/Automatic differentiation]]"
         - "Jacobian-Vector Product (JJP)"

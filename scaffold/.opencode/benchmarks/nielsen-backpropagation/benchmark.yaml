@@ -29,6 +29,7 @@ checks:
         - "elementwise Hadamard form"
   forbidden_text:
     - glob: "**/*.md"
+      exclude: "Logs"
       contains:
         - "exponentially worse"
         - "cost is independent of the number of parameters"

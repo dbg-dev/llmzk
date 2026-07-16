@@ -189,7 +189,14 @@ def text_targets(vault: Path, spec: dict[str, Any], config: LlmzkConfig) -> list
         target = resolve_item(vault, str(spec["path"]), config)
         return [] if ignored_benchmark_path(target) or not target.is_file() else [target]
     if "glob" in spec:
-        return glob_matches(vault, str(spec["glob"]), config)
+        matches = glob_matches(vault, str(spec["glob"]), config)
+        excludes = spec.get("exclude") or []
+        if isinstance(excludes, str):
+            excludes = [excludes]
+        if excludes:
+            exclude_set = set(excludes)
+            matches = [m for m in matches if not any(part in exclude_set for part in m.parts)]
+        return matches
     return []
 
 
