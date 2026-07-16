@@ -11,7 +11,7 @@ import re
 
 import tyro
 
-from llmzk_tools.config import LlmzkConfig, load_config, starts_with_known_root
+from llmzk_tools.config import LlmzkConfig, load_config
 
 WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 KNOWN_ROOTS = [
