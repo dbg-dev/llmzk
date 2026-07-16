@@ -1,3 +1,10 @@
+# v5.6.1 — Update workflow unit tests
+
+- Added pytest unit tests for the v5.6 maintenance/update code path.
+- Covered dry-run behaviour, copy-mode updates, symlink-mode updates, protected durable folders, dirty-Git blocking, and doctor update metadata checks.
+- Added a dev dependency group for pytest and documented the test command.
+- Fixed `.llmzk.yaml` scalar writing so YAML document-end markers are not emitted between fields.
+
 # v5.6 — maintenance and update workflow
 
 - Added `scripts/update-vault.sh` for updating an installed vault from the upstream scaffold.

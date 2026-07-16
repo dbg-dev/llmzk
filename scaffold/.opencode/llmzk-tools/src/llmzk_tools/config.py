@@ -122,6 +122,17 @@ def load_config(root: Path) -> LlmzkConfig:
     )
 
 
+def yaml_scalar(value: object) -> str:
+    """Render one YAML scalar without document-end markers.
+
+    yaml.safe_dump(..., default_flow_style=True) emits a trailing "..."
+    for plain scalars.  Inline config writing needs just the scalar text.
+    """
+    dumped = yaml.safe_dump(value, default_flow_style=True, width=10_000).strip()
+    lines = [line for line in dumped.splitlines() if line.strip() != "..."]
+    return " ".join(lines).strip()
+
+
 def write_config(root: Path, *, instance_name: str, vault_relative_prefix: str = "", link_style: str = "local", installed_version: str = "", install_mode: str = "copy", source_path: str = "") -> None:
     prefix = normalize_prefix(vault_relative_prefix)
     if link_style not in {"local", "vault_relative"}:
@@ -133,11 +144,11 @@ def write_config(root: Path, *, instance_name: str, vault_relative_prefix: str =
         "# If this llmzk instance lives inside a larger Obsidian vault, set\n"
         "# vault_relative_prefix to the folder path from the Obsidian vault root.\n"
         "schema_version: 1\n"
-        f"instance_name: {yaml.safe_dump(str(instance_name), default_flow_style=True).strip()}\n"
-        f"vault_relative_prefix: {yaml.safe_dump(prefix, default_flow_style=True).strip()}\n"
-        f"link_style: {yaml.safe_dump(link_style, default_flow_style=True).strip()}\n"
-        f"installed_version: {yaml.safe_dump(str(installed_version), default_flow_style=True).strip()}\n"
-        f"install_mode: {yaml.safe_dump(install_mode, default_flow_style=True).strip()}\n"
-        f"source_path: {yaml.safe_dump(str(source_path), default_flow_style=True).strip()}\n"
+        f"instance_name: {yaml_scalar(str(instance_name))}\n"
+        f"vault_relative_prefix: {yaml_scalar(prefix)}\n"
+        f"link_style: {yaml_scalar(link_style)}\n"
+        f"installed_version: {yaml_scalar(str(installed_version))}\n"
+        f"install_mode: {yaml_scalar(install_mode)}\n"
+        f"source_path: {yaml_scalar(str(source_path))}\n"
     )
     (root / ".llmzk.yaml").write_text(text, encoding="utf-8")

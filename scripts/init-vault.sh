@@ -220,7 +220,7 @@ schema_version: 1
 instance_name: "$INSTANCE_NAME"
 vault_relative_prefix: "$VAULT_PREFIX"
 link_style: "$LINK_STYLE"
-installed_version: "0.5.6"
+installed_version: "0.5.6.1"
 install_mode: "$MODE"
 source_path: "$SOURCE_PATH"
 CONFIG

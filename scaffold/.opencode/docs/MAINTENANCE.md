@@ -96,3 +96,22 @@ The update workflow is a system-layer operation. It should still be reviewed wit
 .opencode/bin/llmzk git diff . --stat
 .opencode/bin/llmzk git diff .
 ```
+
+
+## Testing the update workflow
+
+The installed tooling includes unit tests for the v5.6 update path. From the source checkout or an installed vault tool project, run:
+
+```bash
+cd scaffold/.opencode/llmzk-tools
+uv run --group dev pytest
+```
+
+The tests cover:
+
+- dry-run updates do not mutate the vault
+- copy-mode updates only the system layer
+- symlink-mode points `.opencode/` and `Templates/` at the upstream scaffold
+- durable note folders and `Logs/` are preserved
+- dirty Git trees block `--apply` unless `--allow-dirty` is explicit
+- doctor reports version/install-mode/source-path drift

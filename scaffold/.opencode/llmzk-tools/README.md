@@ -56,3 +56,16 @@ For a path that begins with `-`, use the standard end-of-options separator:
 .opencode/bin/llmzk review validate -- "Logs/Candidate Reviews/-example.md"
 ```
 
+
+
+## Tests
+
+The update/maintenance workflow has unit tests for dry-run/apply behaviour, copy-mode and symlink-mode updates, protected durable folders, and doctor version-metadata checks.
+
+Run from `.opencode/llmzk-tools/`:
+
+```bash
+uv run --group dev pytest
+```
+
+These tests are intentionally scoped to deterministic tooling. They do not call an LLM and they do not modify durable vault notes.
