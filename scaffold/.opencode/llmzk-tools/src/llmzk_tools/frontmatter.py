@@ -45,12 +45,26 @@ def parse_frontmatter(text: str) -> tuple[dict, str, str | None]:
 
 
 def quote_yaml_string(s: str) -> str:
-    escaped = s.replace('"', '\\"')
+    escaped = s.replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
 
 
 def is_date_like(value: str) -> bool:
     return bool(re.match(r"^\d{4}-\d{2}-\d{2}(?:T|$|\s)", value))
+
+
+def _would_be_reinterpreted(value: str) -> bool:
+    """Check if yaml.safe_load would parse this bare string as a non-string type.
+
+    Guards against YAML 1.1 boolean keywords (yes/no/on/off/true/false),
+    null keywords (null/Null/NULL/~), and numeric-looking strings (123, 0x1f,
+    3.14) that would silently change type on round-trip.
+    """
+    try:
+        parsed = yaml.safe_load(value)
+    except yaml.YAMLError:
+        return True
+    return not isinstance(parsed, str) or parsed != value
 
 
 def format_scalar(value: Any) -> str:
@@ -64,7 +78,7 @@ def format_scalar(value: Any) -> str:
         return ""
     if isinstance(value, str):
         value = value.replace(r"\|", "|")
-        if is_date_like(value) or ":" in value or "#" in value or "[" in value or "]" in value or "/" in value or "|" in value:
+        if is_date_like(value) or ":" in value or "#" in value or "[" in value or "]" in value or "/" in value or "|" in value or _would_be_reinterpreted(value):
             return quote_yaml_string(value)
         return value
     return str(value)
