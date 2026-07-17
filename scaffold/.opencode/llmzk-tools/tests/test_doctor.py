@@ -21,7 +21,7 @@ def write(path: Path, text: str = "x\n") -> Path:
 def make_vault(tmp_path: Path, *, init_git: bool = True) -> Path:
     vault = tmp_path / "vault"
     vault.mkdir()
-    for rel in doctor_mod.ROOT_FILES:
+    for rel in doctor_mod.DOCTOR_ROOT_FILES:
         if rel == ".gitignore":
             write(vault / rel, ".venv/\n__MACOSX/\n.DS_Store\n")
         elif rel == "opencode.json":

@@ -11,104 +11,19 @@ from llmzk_tools import __version__
 from llmzk_tools.config import load_config
 from llmzk_tools.finding import Finding, add
 from llmzk_tools.git_util import find_repo, porcelain
+from llmzk_tools.manifest import (
+    LOG_FOLDERS,
+    REQUIRED_COMMANDS,
+    REQUIRED_DOCS,
+    REQUIRED_OPEN_CODE_DIRS,
+    REQUIRED_SKILLS,
+    REQUIRED_TEMPLATES,
+    REQUIRED_TOOLS,
+    ROOT_FILES,
+    VAULT_FOLDERS,
+)
 
-VAULT_FOLDERS = [
-    "00 Inbox",
-    "00 Fleeting Notes",
-    "01 Sources",
-    "02 Literature Notes",
-    "03 Permanent Notes",
-    "04 Concept Notes",
-    "05 Bridge Notes",
-    "06 Contradiction Notes",
-    "07 Index Notes",
-    "08 Wiki Articles",
-    "09 Media",
-]
-
-LOG_FOLDERS = [
-    "Logs/Passports",
-    "Logs/Decision Logs",
-    "Logs/Candidate Reviews",
-    "Logs/Review Queue",
-]
-
-ROOT_FILES = ["AGENTS.md", "opencode.json", ".gitignore", ".llmzk.yaml"]
-REQUIRED_OPEN_CODE_DIRS = [
-    ".opencode/commands",
-    ".opencode/agents",
-    ".opencode/skills",
-    ".opencode/docs",
-    ".opencode/llmzk-tools",
-    ".opencode/llmzk-tools/src/llmzk_tools",
-    ".opencode/bin",
-]
-REQUIRED_COMMANDS = [
-    "llmzk-audit.md",
-    "llmzk-benchmark.md",
-    "llmzk-doctor.md",
-    "llmzk-fix-frontmatter.md",
-    "llmzk-git-commit-message.md",
-    "llmzk-git-diff.md",
-    "llmzk-git-preflight.md",
-    "llmzk-git-revert-run.md",
-    "llmzk-git-status.md",
-    "llmzk-ingest.md",
-    "llmzk-write-approved.md",
-    "llmzk-review-validate.md",
-    "llmzk-promote-candidates.md",
-    "llmzk-ingest-candidates.md",
-    "llmzk-normalize-links.md",
-    "llmzk-promote.md",
-    "llmzk-review.md",
-    "llmzk-review-candidates.md",
-    "llmzk-synthesize.md",
-    "llmzk-update.md",
-]
-REQUIRED_SKILLS = [
-    "llmzk-audit/SKILL.md",
-    "llmzk-git-safety/SKILL.md",
-    "llmzk-ingest/SKILL.md",
-    "llmzk-promote/SKILL.md",
-    "llmzk-synthesize/SKILL.md",
-]
-REQUIRED_DOCS = [
-    "SOUL.md",
-    "STRUCTURE.md",
-    "STYLE.md",
-    "SCHEMA.md",
-    "LINT_RULES.md",
-    "GIT_POLICY.md",
-    "OBSIDIAN_SKILLS.md",
-    "OPERATING_PROFILES.md",
-    "BENCHMARKS.md",
-    "MULTI_INSTANCE.md",
-    "MAINTENANCE.md",
-]
-REQUIRED_TOOLS = [
-    "audit.py",
-    "benchmark.py",
-    "config.py",
-    "doctor.py",
-    "fix_frontmatter.py",
-    "git_safety.py",
-    "new_run.py",
-    "normalize_links.py",
-    "review.py",
-    "update.py",
-]
-REQUIRED_TEMPLATES = [
-    "source-note.md",
-    "literature-note.md",
-    "permanent-note.md",
-    "concept-note.md",
-    "bridge-note.md",
-    "contradiction-note.md",
-    "index-note.md",
-    "passport.md",
-    "decision-log.md",
-    "candidate-review.md",
-]
+DOCTOR_ROOT_FILES = [*ROOT_FILES, ".llmzk.yaml"]
 
 
 def check_exists(findings: list[Finding], root: Path, rel_paths: Iterable[str], *, kind: str) -> None:
@@ -318,7 +233,7 @@ def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = Fal
         add(findings, "fail", f"Vault path does not exist: {root}")
         return 1, findings
 
-    check_exists(findings, root, ROOT_FILES, kind="root file")
+    check_exists(findings, root, DOCTOR_ROOT_FILES, kind="root file")
     check_exists(findings, root, REQUIRED_OPEN_CODE_DIRS, kind="OpenCode directory")
     check_exists(findings, root / ".opencode/commands", REQUIRED_COMMANDS, kind="OpenCode command")
     check_exists(findings, root / ".opencode/skills", REQUIRED_SKILLS, kind="OpenCode skill")

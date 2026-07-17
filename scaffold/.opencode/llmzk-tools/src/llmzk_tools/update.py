@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import filecmp
+import fnmatch
 import json as json_lib
 import shutil
 from dataclasses import dataclass
@@ -12,16 +13,12 @@ import tyro
 from llmzk_tools import __version__
 from llmzk_tools.config import load_config, write_config
 from llmzk_tools.git_util import git_dirty
+from llmzk_tools.manifest import ROOT_FILES, SYSTEM_DIRS, scaffold_managed_paths
 
-SYSTEM_FILES = ["AGENTS.md", "opencode.json", ".gitignore"]
-SYSTEM_DIRS = [".opencode", "Templates"]
-NEVER_TOUCH = {
-    "00 Inbox", "00 Fleeting Notes", "01 Sources", "02 Literature Notes",
-    "03 Permanent Notes", "04 Concept Notes", "05 Bridge Notes",
-    "06 Contradiction Notes", "07 Index Notes", "08 Wiki Articles", "09 Media", "Logs",
-}
 IGNORED_PARTS = {".git", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", "node_modules", "__MACOSX"}
 IGNORED_NAMES = {".DS_Store"}
+
+_SCAFFOLD_MANAGED = scaffold_managed_paths()
 
 
 @dataclass(frozen=True)
@@ -34,6 +31,11 @@ class Change:
 
 def add(changes: list[Change], level: str, action: str, path: str, message: str) -> None:
     changes.append(Change(level=level, action=action, path=path, message=message))
+
+
+def is_scaffold_managed(file_rel: str) -> bool:
+    """Check if a relative path matches scaffold-owned naming conventions."""
+    return any(fnmatch.fnmatch(file_rel, pat) for pat in _SCAFFOLD_MANAGED)
 
 
 def ignored(path: Path) -> bool:
@@ -75,7 +77,7 @@ def file_changed(src: Path, dst: Path) -> bool:
 
 def plan_copy(vault: Path, scaffold: Path) -> list[Change]:
     changes: list[Change] = []
-    for rel in SYSTEM_FILES:
+    for rel in ROOT_FILES:
         src = scaffold / rel
         dst = vault / rel
         if not src.exists():
@@ -94,20 +96,27 @@ def plan_copy(vault: Path, scaffold: Path) -> list[Change]:
         if dst_dir.is_symlink():
             add(changes, "change", "replace-symlink", rel, "Will replace symlink with copied directory")
             continue
+        scaffold_files = set()
         for src in iter_files(src_dir):
             file_rel = src.relative_to(scaffold).as_posix()
+            scaffold_files.add(file_rel)
             dst = vault / file_rel
             if file_changed(src, dst):
                 action = "create" if not dst.exists() else "update"
                 add(changes, "change", action, file_rel, "System file differs from scaffold")
             else:
                 add(changes, "ok", "unchanged", file_rel, "System file matches scaffold")
+        if dst_dir.exists():
+            for dst in iter_files(dst_dir):
+                file_rel = dst.relative_to(vault).as_posix()
+                if file_rel not in scaffold_files and is_scaffold_managed(file_rel):
+                    add(changes, "change", "delete", file_rel, "Stale scaffold file not in upstream")
     return changes
 
 
 def plan_symlink(vault: Path, scaffold: Path) -> list[Change]:
     changes: list[Change] = []
-    for rel in SYSTEM_FILES:
+    for rel in ROOT_FILES:
         src = scaffold / rel
         dst = vault / rel
         if not src.exists():
@@ -139,22 +148,30 @@ def copy_file(src: Path, dst: Path) -> None:
     shutil.copy2(src, dst)
 
 
-def copy_tree_overlay(src_dir: Path, dst_dir: Path) -> None:
+def copy_tree_overlay(src_dir: Path, dst_dir: Path, *, system_prefix: str = "") -> None:
     if dst_dir.is_symlink() or dst_dir.is_file():
         dst_dir.unlink()
     dst_dir.mkdir(parents=True, exist_ok=True)
+    scaffold_files = set()
     for src in iter_files(src_dir):
         rel = src.relative_to(src_dir)
+        scaffold_files.add(rel.as_posix())
         dst = dst_dir / rel
         copy_file(src, dst)
+    if dst_dir.exists():
+        for dst in iter_files(dst_dir):
+            rel = dst.relative_to(dst_dir).as_posix()
+            full_rel = f"{system_prefix}{rel}" if system_prefix else rel
+            if rel not in scaffold_files and is_scaffold_managed(full_rel):
+                dst.unlink()
 
 
 def apply_update(vault: Path, scaffold: Path, *, mode: str, source: Path) -> None:
-    for rel in SYSTEM_FILES:
+    for rel in ROOT_FILES:
         copy_file(scaffold / rel, vault / rel)
     if mode == "copy":
         for rel in SYSTEM_DIRS:
-            copy_tree_overlay(scaffold / rel, vault / rel)
+            copy_tree_overlay(scaffold / rel, vault / rel, system_prefix=f"{rel}/")
     else:
         for rel in SYSTEM_DIRS:
             dst = vault / rel

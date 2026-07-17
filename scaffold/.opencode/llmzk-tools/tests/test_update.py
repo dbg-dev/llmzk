@@ -185,3 +185,110 @@ def test_plan_symlink_reports_directory_symlink_actions(tmp_path: Path) -> None:
 
     assert (".opencode", "symlink") in actions
     assert ("Templates", "symlink") in actions
+
+
+def test_plan_copy_detects_stale_scaffold_files_not_in_upstream(tmp_path: Path) -> None:
+    _source, scaffold = make_source_repo(tmp_path)
+    vault = make_vault(tmp_path)
+    write(vault / ".opencode" / "commands" / "llmzk-old-removed.md", "stale\n")
+    write(vault / ".opencode" / "docs" / "OLD-REMOVED.md", "stale doc\n")
+    write(vault / ".opencode" / "agents" / "zk-old-agent.md", "stale agent\n")
+
+    changes = update_mod.plan_copy(vault, scaffold)
+    stale = [c for c in changes if c.action == "delete"]
+
+    stale_paths = {c.path for c in stale}
+    assert ".opencode/commands/llmzk-old-removed.md" in stale_paths
+    assert ".opencode/agents/zk-old-agent.md" in stale_paths
+    for c in stale:
+        assert "Stale scaffold file not in upstream" in c.message
+
+
+def test_plan_copy_does_not_flag_user_files_as_stale(tmp_path: Path) -> None:
+    _source, scaffold = make_source_repo(tmp_path)
+    vault = make_vault(tmp_path)
+    write(vault / ".opencode" / "commands" / "my-custom-command.md", "custom\n")
+    write(vault / ".opencode" / "commands" / "README.md", "user readme\n")
+
+    changes = update_mod.plan_copy(vault, scaffold)
+    stale = [c for c in changes if c.action == "delete"]
+
+    assert stale == []
+
+
+def test_plan_copy_does_not_flag_scaffold_files_as_stale(tmp_path: Path) -> None:
+    _source, scaffold = make_source_repo(tmp_path)
+    vault = make_vault(tmp_path)
+
+    changes = update_mod.plan_copy(vault, scaffold)
+    stale = [c for c in changes if c.action == "delete"]
+
+    assert stale == []
+
+
+def test_apply_update_copy_deletes_stale_scaffold_files(tmp_path: Path) -> None:
+    source, scaffold = make_source_repo(tmp_path)
+    vault = make_vault(tmp_path)
+    stale_file = write(vault / ".opencode" / "commands" / "llmzk-old-removed.md", "stale\n")
+
+    update_mod.apply_update(vault, scaffold, mode="copy", source=source)
+
+    assert not stale_file.exists()
+
+
+def test_apply_update_copy_preserves_durable_files(tmp_path: Path) -> None:
+    source, scaffold = make_source_repo(tmp_path)
+    vault = make_vault(tmp_path)
+
+    update_mod.apply_update(vault, scaffold, mode="copy", source=source)
+
+    assert_durable_sentinels_preserved(vault)
+
+
+def test_apply_update_copy_preserves_user_files(tmp_path: Path) -> None:
+    source, scaffold = make_source_repo(tmp_path)
+    vault = make_vault(tmp_path)
+    user_file = write(vault / ".opencode" / "commands" / "my-custom-command.md", "custom\n")
+    user_doc = write(vault / ".opencode" / "docs" / "my-notes.md", "notes\n")
+
+    update_mod.apply_update(vault, scaffold, mode="copy", source=source)
+
+    assert user_file.exists()
+    assert user_file.read_text(encoding="utf-8") == "custom\n"
+    assert user_doc.exists()
+    assert user_doc.read_text(encoding="utf-8") == "notes\n"
+
+
+def test_is_scaffold_managed_matches_llmzk_commands():
+    assert update_mod.is_scaffold_managed(".opencode/commands/llmzk-audit.md")
+    assert update_mod.is_scaffold_managed(".opencode/commands/llmzk-write-approved.md")
+
+
+def test_is_scaffold_managed_matches_zk_agents():
+    assert update_mod.is_scaffold_managed(".opencode/agents/zk-auditor.md")
+    assert update_mod.is_scaffold_managed(".opencode/agents/zk-curator.md")
+
+
+def test_is_scaffold_managed_matches_docs():
+    assert update_mod.is_scaffold_managed(".opencode/docs/SOUL.md")
+    assert update_mod.is_scaffold_managed(".opencode/docs/BENCHMARKS.md")
+
+
+def test_is_scaffold_managed_matches_templates():
+    assert update_mod.is_scaffold_managed("Templates/concept-note.md")
+    assert update_mod.is_scaffold_managed("Templates/passport.md")
+
+
+def test_is_scaffold_managed_matches_llmzk_tools():
+    assert update_mod.is_scaffold_managed(".opencode/llmzk-tools/src/llmzk_tools/audit.py")
+    assert update_mod.is_scaffold_managed(".opencode/llmzk-tools/pyproject.toml")
+
+
+def test_is_scaffold_managed_matches_bin():
+    assert update_mod.is_scaffold_managed(".opencode/bin/llmzk")
+
+
+def test_is_scaffold_managed_does_not_match_user_files():
+    assert not update_mod.is_scaffold_managed(".opencode/commands/my-custom-command.md")
+    assert not update_mod.is_scaffold_managed(".opencode/commands/README.md")
+    assert not update_mod.is_scaffold_managed(".opencode/agents/my-agent.md")
