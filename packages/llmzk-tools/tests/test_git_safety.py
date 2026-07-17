@@ -345,16 +345,22 @@ def test_run_revert_run_no_outputs_returns_one(
     assert "Nothing to revert" in capsys.readouterr().out
 
 
-def test_run_revert_run_refuses_to_delete_directory(tmp_path: Path) -> None:
+def test_run_revert_run_refuses_to_delete_directory(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     repo = make_repo(tmp_path)
     write(tmp_path / "a.md", "a\n")
     commit_all(repo)
-    write(tmp_path / "04 Concept Notes" / "sub" / "Gen.md", "x\n")
+    generated = write(tmp_path / "04 Concept Notes" / "sub" / "Gen.md", "x\n")
     p = tmp_path / "passport.yaml"
-    p.write_text("outputs:\n  - 04 Concept Notes/sub\n", encoding="utf-8")
-    with pytest.raises(SystemExit) as exc:
-        run_revert_run(RevertRun(passport=p, path=tmp_path, apply=True))
-    assert "Refusing to delete" in str(exc.value)
+    p.write_text("outputs:\n - 04 Concept Notes/sub\n", encoding="utf-8")
+
+    code = run_revert_run(RevertRun(passport=p, path=tmp_path, apply=True))
+
+    assert code == 1
+    assert generated.exists()
+    assert "Refusing to revert a directory path" in capsys.readouterr().out
+
 
 
 def test_run_revert_run_refuses_path_escape(
@@ -366,15 +372,14 @@ def test_run_revert_run_refuses_path_escape(
     outside = tmp_path.parent / "outside-escape-target.txt"
     outside.write_text("secret\n", encoding="utf-8")
     p = tmp_path / "passport.yaml"
-    p.write_text(
-        f"outputs:\n  - ../../{outside.name}\n",
-        encoding="utf-8",
-    )
+    p.write_text(f"outputs:\n - ../../{outside.name}\n", encoding="utf-8")
+
     code = run_revert_run(RevertRun(passport=p, path=tmp_path, apply=True))
-    assert code == 0
+
+    assert code == 1
     assert outside.exists()
-    out = capsys.readouterr().out
-    assert "Refusing to touch path outside vault root" in out
+    assert "REFUSED" in capsys.readouterr().out
+
 
 
 def test_run_revert_run_refuses_absolute_path_escape(
@@ -386,12 +391,10 @@ def test_run_revert_run_refuses_absolute_path_escape(
     target = tmp_path.parent / "absolute-escape.txt"
     target.write_text("secret\n", encoding="utf-8")
     p = tmp_path / "passport.yaml"
-    p.write_text(
-        f"outputs:\n  - {target}\n",
-        encoding="utf-8",
-    )
+    p.write_text(f"outputs:\n - {target}\n", encoding="utf-8")
+
     code = run_revert_run(RevertRun(passport=p, path=tmp_path, apply=True))
-    assert code == 0
+
+    assert code == 1
     assert target.exists()
-    out = capsys.readouterr().out
-    assert "Refusing to touch path outside vault root" in out
+    assert "REFUSED" in capsys.readouterr().out

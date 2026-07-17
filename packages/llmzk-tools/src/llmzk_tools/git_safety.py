@@ -220,6 +220,63 @@ def flatten_paths(value: Any) -> list[str]:
     return paths
 
 
+
+class PassportOutputError(ValueError):
+    """Raised when a passport's outputs field does not match the supported schema."""
+
+
+@dataclass(frozen=True)
+class RevertSummary:
+    restored: int = 0
+    deleted: int = 0
+    unchanged: int = 0
+    refused: int = 0
+    failed: int = 0
+
+    @property
+    def exit_code(self) -> int:
+        return 1 if self.refused or self.failed else 0
+
+
+def parse_output_paths(outputs: Any) -> list[str]:
+    """Parse the explicit passport output schema without recursive path guessing.
+
+    Supported forms are a string, a list of strings, or a mapping whose values
+    are strings, lists of strings, or null. Nested mappings and non-string list
+    items are rejected.
+    """
+
+    def parse_value(value: Any, *, location: str) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return []
+            return [value]
+        if isinstance(value, list):
+            paths: list[str] = []
+            for index, item in enumerate(value):
+                if not isinstance(item, str) or not item.strip():
+                    raise PassportOutputError(
+                        f"{location}[{index}] must be a non-empty path string"
+                    )
+                paths.append(item.strip())
+            return paths
+        raise PassportOutputError(
+            f"{location} must be a path string, a list of path strings, or null"
+        )
+
+    if isinstance(outputs, dict):
+        paths: list[str] = []
+        for category, value in outputs.items():
+            if not isinstance(category, str) or not category.strip():
+                raise PassportOutputError("outputs category names must be non-empty strings")
+            paths.extend(parse_value(value, location=f"outputs.{category}"))
+        return paths
+
+    return parse_value(outputs, location="outputs")
+
 def run_commit_message(args: CommitMessage) -> int:
     passport_path = args.passport.expanduser().resolve()
     data = load_passport(passport_path)
@@ -253,15 +310,29 @@ def run_revert_run(args: RevertRun) -> int:
     context = require_context(args.path)
     passport_path = args.passport.expanduser().resolve()
     data = load_passport(passport_path)
-    outputs = data.get("outputs") or {}
-    paths = sorted(set(flatten_paths(outputs)))
+
+    try:
+        paths = sorted(set(parse_output_paths(data.get("outputs"))))
+    except PassportOutputError as exc:
+        print(f"Invalid passport outputs: {exc}")
+        return 1
+
     if not paths:
         print("No output paths found in passport. Nothing to revert automatically.")
         return 1
 
+    valid: list[tuple[Path, Path, str]] = []
+    refused = 0
     print("Files associated with this run:")
-    for path in paths:
-        print(f"- {path}")
+    for raw in paths:
+        try:
+            local_rel, target, repo_rel = instance_to_repo_path(context, raw)
+        except ValueError as exc:
+            refused += 1
+            print(f"- REFUSED {raw} ({exc})")
+            continue
+        valid.append((local_rel, target, repo_rel))
+        print(f"- {local_rel}")
     print()
 
     # Dry-run is the default. `dry_run` is retained for compatibility with existing commands.
@@ -269,29 +340,73 @@ def run_revert_run(args: RevertRun) -> int:
     if not args.apply:
         print("Dry run only. No files changed.")
         print("To apply, rerun with --apply after explicit user approval.")
-        return 0
+        print(
+            f"Summary: planned={len(valid)} refused={refused} failed=0"
+        )
+        return 1 if refused else 0
 
-    for raw in paths:
+    restored = 0
+    deleted = 0
+    unchanged = 0
+    failed = 0
+
+    for local_rel, target, repo_rel in valid:
+        if target.is_dir() and not target.is_symlink():
+            refused += 1
+            print(f"Refusing to revert a directory path automatically: {local_rel}")
+            continue
+
+        tracked_matches: list[str] = []
         try:
-            local_rel, target, repo_rel = instance_to_repo_path(context, raw)
-        except ValueError:
-            print(f"Refusing to touch path outside vault root: {raw}")
+            output = context.repo.git.ls_files("--error-unmatch", "--", repo_rel)
+            tracked_matches = [line for line in output.splitlines() if line.strip()]
+        except GitCommandError:
+            pass
+
+        if tracked_matches and repo_rel not in tracked_matches:
+            refused += 1
+            print(f"Refusing non-file Git pathspec: {local_rel}")
+            continue
+
+        if repo_rel in tracked_matches:
+            try:
+                context.repo.git.checkout("--", repo_rel)
+                restored += 1
+                print(f"Restored tracked file: {local_rel}")
+            except GitCommandError as exc:
+                failed += 1
+                print(f"Failed to restore tracked file: {local_rel} ({exc})")
+            continue
+
+        if not target.exists() and not target.is_symlink():
+            unchanged += 1
+            print(f"Already absent: {local_rel}")
             continue
 
         try:
-            context.repo.git.ls_files("--error-unmatch", "--", repo_rel)
-            context.repo.git.checkout("--", repo_rel)
-            print(f"Restored tracked file: {local_rel}")
-        except GitCommandError:
-            if target.exists():
-                if target.is_dir():
-                    raise SystemExit(
-                        f"Refusing to delete generated directory automatically: {local_rel}"
-                    )
-                target.unlink()
-                print(f"Deleted untracked generated file: {local_rel}")
-    return 0
+            target.unlink()
+            deleted += 1
+            print(f"Deleted untracked generated file: {local_rel}")
+        except OSError as exc:
+            failed += 1
+            print(f"Failed to delete untracked generated file: {local_rel} ({exc})")
 
+    summary = RevertSummary(
+        restored=restored,
+        deleted=deleted,
+        unchanged=unchanged,
+        refused=refused,
+        failed=failed,
+    )
+    print(
+        "Summary: "
+        f"restored={summary.restored} "
+        f"deleted={summary.deleted} "
+        f"unchanged={summary.unchanged} "
+        f"refused={summary.refused} "
+        f"failed={summary.failed}"
+    )
+    return summary.exit_code
 
 def main() -> int:
     command = tyro.cli(Command)

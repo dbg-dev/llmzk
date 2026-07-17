@@ -1,3 +1,11 @@
+# v5.8.1 — update and revert hardening
+
+- Back up the complete managed system layer before applying updates.
+- Restore root files, `.opencode`, `Templates`, symlinks, stale files, and configuration on failure.
+- Retain the backup and report its path if rollback itself fails.
+- Parse passport outputs using an explicit flat schema rather than recursive path guessing.
+- Return non-zero for refused or failed revert paths and print an operation summary.
+
 # v5.8 — instance-scoped Git safety
 
 - Separate the enclosing Git repository root from the supplied llmzk instance root.
