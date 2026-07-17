@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 import tyro
 
 from llmzk_tools import __version__
 from llmzk_tools.config import load_config, write_config
+from llmzk_tools.git_util import git_dirty
 
 SYSTEM_FILES = ["AGENTS.md", "opencode.json", ".gitignore"]
 SYSTEM_DIRS = [".opencode", "Templates"]
@@ -46,21 +46,6 @@ def source_scaffold(source: Path) -> Path:
     if not scaffold.exists():
         raise FileNotFoundError(f"Source repo does not contain scaffold/: {root}")
     return scaffold
-
-
-def find_repo(root: Path) -> Repo | None:
-    try:
-        return Repo(root, search_parent_directories=True)
-    except (InvalidGitRepositoryError, NoSuchPathError):
-        return None
-
-
-def git_dirty(root: Path) -> tuple[bool, int]:
-    repo = find_repo(root)
-    if repo is None:
-        return False, 0
-    lines = [line for line in repo.git.status("--porcelain=v1").splitlines() if line.strip()]
-    return bool(lines), len(lines)
 
 
 def iter_files(base: Path) -> Iterable[Path]:

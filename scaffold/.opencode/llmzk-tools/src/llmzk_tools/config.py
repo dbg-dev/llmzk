@@ -19,7 +19,7 @@ CONTENT_ROOTS = {
 }
 LOG_ROOTS = {"Logs"}
 KNOWN_ROOTS = CONTENT_ROOTS | LOG_ROOTS
-DURABLE_ROOTS = CONTENT_ROOTS - {"00 Inbox", "00 Fleeting Notes"}
+DURABLE_ROOTS = CONTENT_ROOTS - {"00 Inbox", "00 Fleeting Notes", "09 Media"}
 
 
 @dataclass(frozen=True)

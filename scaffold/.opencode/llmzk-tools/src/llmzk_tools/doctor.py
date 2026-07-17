@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import json as json_lib
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
+from git import GitCommandError
 import tyro
 
 from llmzk_tools import __version__
 from llmzk_tools.config import load_config
+from llmzk_tools.finding import Finding, add
+from llmzk_tools.git_util import find_repo, porcelain
 
 VAULT_FOLDERS = [
     "00 Inbox",
@@ -110,16 +111,6 @@ REQUIRED_TEMPLATES = [
 ]
 
 
-@dataclass(frozen=True)
-class Finding:
-    level: str
-    message: str
-
-
-def add(findings: list[Finding], level: str, message: str) -> None:
-    findings.append(Finding(level=level, message=message))
-
-
 def check_exists(findings: list[Finding], root: Path, rel_paths: Iterable[str], *, kind: str) -> None:
     for rel in rel_paths:
         path = root / rel
@@ -127,13 +118,6 @@ def check_exists(findings: list[Finding], root: Path, rel_paths: Iterable[str], 
             add(findings, "ok", f"{kind} exists: {rel}")
         else:
             add(findings, "fail", f"Missing {kind}: {rel}")
-
-
-def find_repo(root: Path) -> Repo | None:
-    try:
-        return Repo(root, search_parent_directories=True)
-    except (InvalidGitRepositoryError, NoSuchPathError):
-        return None
 
 
 def check_git(findings: list[Finding], root: Path, *, fail_if_dirty: bool) -> None:
@@ -148,7 +132,7 @@ def check_git(findings: list[Finding], root: Path, *, fail_if_dirty: bool) -> No
     else:
         add(findings, "ok", "Git repository detected at vault root")
 
-    dirty = [line for line in repo.git.status("--porcelain=v1").splitlines() if line.strip()]
+    dirty = porcelain(repo)
     if not dirty:
         add(findings, "ok", "Git working tree is clean")
     else:

@@ -11,16 +11,14 @@ from pathlib import Path
 from typing import Any
 import fnmatch
 import json as json_lib
-import re
 
 import tyro
 import yaml
 
 from llmzk_tools.audit import audit
 from llmzk_tools.config import LlmzkConfig, load_config
-
-FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n?", re.DOTALL)
-WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
+from llmzk_tools.frontmatter import parse_frontmatter
+from llmzk_tools.wikilink import WIKILINK_RE, strip_wikilink_target
 
 
 @dataclass
@@ -71,16 +69,8 @@ def read_yaml(path: Path) -> dict[str, Any]:
 
 
 def split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
-    match = FRONTMATTER_RE.match(text)
-    if not match:
-        return {}, text
-    try:
-        data = yaml.safe_load(match.group(1)) or {}
-    except yaml.YAMLError:
-        data = {}
-    if not isinstance(data, dict):
-        data = {}
-    return data, text[match.end():]
+    data, body, _raw = parse_frontmatter(text)
+    return data, body
 
 
 def add(result: CaseResult, level: str, check: str, message: str) -> None:
@@ -348,11 +338,7 @@ def check_forbidden_text(result: CaseResult, vault: Path, items: list[dict[str, 
 
 
 def _wikilink_target(inner: str, config: LlmzkConfig) -> str:
-    inner = inner.replace(r"\|", "|").strip()
-    target = inner.split("|", 1)[0].split("#", 1)[0].strip().strip("/")
-    if target.endswith(".md"):
-        target = target[:-3]
-    return config.to_local_target(target)
+    return config.to_local_target(strip_wikilink_target(inner))
 
 
 def wikilink_target_candidates(spec: Any) -> list[str]:

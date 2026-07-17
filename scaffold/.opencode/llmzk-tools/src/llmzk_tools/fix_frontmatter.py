@@ -11,45 +11,26 @@ It does not rewrite the body of the note.
 """
 from __future__ import annotations
 
-import datetime as dt
-import re
 from pathlib import Path
 from typing import Any
-from collections import defaultdict
 
 import tyro
 import yaml
 
 from llmzk_tools.config import LlmzkConfig, load_config
-
-LINK_LIST_FIELDS = {
-    "source_trail",
-    "origin_trail",
-    "connects",
-    "derived_from",
-    "updates",
-    "related",
-}
-
-FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n?", re.DOTALL)
-CONTENT_FOLDERS = [
-    "00 Inbox/", "00 Fleeting Notes/", "01 Sources/", "02 Literature Notes/",
-    "03 Permanent Notes/", "04 Concept Notes/", "05 Bridge Notes/",
-    "06 Contradiction Notes/", "07 Index Notes/", "08 Wiki Articles/", "09 Media/",
-    "Logs/Passports/", "Logs/Decision Logs/", "Logs/Review Queue/", "Logs/Candidate Reviews/",
-]
-
-
-def split_frontmatter(text: str) -> tuple[str | None, str]:
-    match = FRONTMATTER_RE.match(text)
-    if not match:
-        return None, text
-    return match.group(1), text[match.end():]
-
-
-def markdown_note_title(path: Path) -> str:
-    name = path.name
-    return name[:-3] if name.endswith(".md") else name
+from llmzk_tools.frontmatter import (
+    split_frontmatter_raw as split_frontmatter,
+    quote_yaml_string,
+    dump_yaml_value,
+)
+from llmzk_tools.paths import (
+    LINK_LIST_FIELDS,
+    iter_markdown,
+    markdown_note_title,
+    build_title_locations,
+    preferred_durable_path,
+)
+from llmzk_tools.wikilink import split_link_inner
 
 
 def build_fleeting_titles(root: Path) -> dict[str, str]:
@@ -63,35 +44,6 @@ def build_fleeting_titles(root: Path) -> dict[str, str]:
     return out
 
 
-def build_title_locations(root: Path) -> dict[str, list[Path]]:
-    out: dict[str, list[Path]] = defaultdict(list)
-    for path in iter_markdown(root):
-        try:
-            rel = path.relative_to(root)
-        except ValueError:
-            continue
-        if rel.parts and rel.parts[0] in {
-            "00 Fleeting Notes", "01 Sources", "02 Literature Notes", "03 Permanent Notes",
-            "04 Concept Notes", "05 Bridge Notes", "06 Contradiction Notes", "07 Index Notes",
-            "08 Wiki Articles",
-        }:
-            out[markdown_note_title(path)].append(rel)
-    return dict(out)
-
-
-def preferred_durable_path(title: str, title_locations: dict[str, list[Path]] | None) -> str | None:
-    if not title_locations:
-        return None
-    locs = title_locations.get(title, [])
-    has_fleeting = any(str(loc).startswith("00 Fleeting Notes/") for loc in locs)
-    durable = [loc for loc in locs if loc.parts and loc.parts[0] != "00 Fleeting Notes"]
-    if not has_fleeting or not durable:
-        return None
-    durable = sorted(durable, key=lambda loc: (0 if str(loc).startswith("04 Concept Notes/") else 1, str(loc)))
-    text = str(durable[0])
-    return text[:-3] if text.endswith(".md") else text
-
-
 def flatten_singletons(value: Any) -> Any:
     """Flatten accidental nested singleton lists from malformed YAML bullets."""
     while isinstance(value, list) and len(value) == 1 and isinstance(value[0], list):
@@ -99,14 +51,6 @@ def flatten_singletons(value: Any) -> Any:
     if isinstance(value, list):
         return [flatten_singletons(v) for v in value]
     return value
-
-
-def split_link_inner(inner: str) -> tuple[str, str | None]:
-    inner = inner.strip().replace(r"\|", "|")
-    if "|" in inner:
-        target, alias = inner.split("|", 1)
-        return target.strip(), alias.strip()
-    return inner.strip(), None
 
 
 def clean_wikilink_text(value: str, *, field: str | None = None, fleeting_titles: dict[str, str] | None = None, title_locations: dict[str, list[Path]] | None = None, config: LlmzkConfig | None = None) -> str:
@@ -188,56 +132,6 @@ def normalize_link_list(value: Any, *, field: str | None = None, fleeting_titles
     return deduped
 
 
-def quote_yaml_string(s: str) -> str:
-    escaped = s.replace('"', '\\"')
-    return f'"{escaped}"'
-
-
-def is_date_like(value: str) -> bool:
-    return bool(re.match(r"^\d{4}-\d{2}-\d{2}(?:T|$|\s)", value))
-
-
-def format_scalar(value: Any) -> str:
-    if isinstance(value, dt.datetime):
-        value = value.isoformat(timespec="seconds")
-    elif isinstance(value, dt.date):
-        value = value.isoformat()
-    if isinstance(value, str):
-        value = value.replace(r"\|", "|")
-        if "[[" in value or ":" in value or "#" in value or "|" in value or "/" in value or is_date_like(value):
-            return quote_yaml_string(value)
-        return value
-    if value is None:
-        return ""
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    return str(value)
-
-
-def dump_yaml_value(lines: list[str], key: str, value: Any, indent: int = 0) -> None:
-    pad = " " * indent
-    if isinstance(value, dict):
-        lines.append(f"{pad}{key}:")
-        for child_key, child_value in value.items():
-            dump_yaml_value(lines, str(child_key), child_value, indent + 2)
-    elif isinstance(value, list):
-        if not value:
-            lines.append(f"{pad}{key}: []")
-        else:
-            lines.append(f"{pad}{key}:")
-            for item in value:
-                if isinstance(item, dict):
-                    lines.append(f"{pad}  -")
-                    for child_key, child_value in item.items():
-                        dump_yaml_value(lines, str(child_key), child_value, indent + 4)
-                else:
-                    lines.append(f"{pad}  - {format_scalar(item)}")
-    elif value is None:
-        lines.append(f"{pad}{key}:")
-    else:
-        lines.append(f"{pad}{key}: {format_scalar(value)}")
-
-
 def dump_frontmatter(data: dict[str, Any], *, fleeting_titles: dict[str, str] | None = None, title_locations: dict[str, list[Path]] | None = None, config: LlmzkConfig | None = None) -> str:
     lines: list[str] = []
     for key, value in data.items():
@@ -271,14 +165,6 @@ def fix_text(text: str, *, fleeting_titles: dict[str, str] | None = None, title_
     new_fm = dump_frontmatter(data, fleeting_titles=fleeting_titles, title_locations=title_locations, config=config)
     new_text = f"---\n{new_fm}\n---\n{body}"
     return new_text, new_text != text, None
-
-
-def iter_markdown(root: Path):
-    skip = {".venv", ".git", "__pycache__", "__MACOSX"}
-    for path in root.rglob("*.md"):
-        if any(part in skip for part in path.parts):
-            continue
-        yield path
 
 
 def run(root: tyro.conf.Positional[Path] = Path("."), apply: bool = False) -> int:

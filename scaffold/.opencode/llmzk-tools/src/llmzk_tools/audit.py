@@ -4,112 +4,37 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-from collections import defaultdict
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable
+from typing import Any
 
 import tyro
 import yaml
 
-from llmzk_tools.config import LlmzkConfig, load_config, local_markdown_path
+from llmzk_tools.config import DURABLE_ROOTS, LlmzkConfig, load_config, local_markdown_path
+from llmzk_tools.frontmatter import split_frontmatter_raw as split_frontmatter
+from llmzk_tools.paths import (
+    LINK_LIST_FIELDS,
+    RAW_INBOX_ROOT,
+    iter_md,
+    build_title_locations as title_locations,
+)
+from llmzk_tools.wikilink import (
+    WIKILINK_RE,
+    strip_wikilink_target,
+    target_stem,
+    is_local_heading_target,
+    is_exact_path_target,
+)
 
-WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 CODE_FENCE_RE = re.compile(r"```(\w+)?\n(.*?)```", re.DOTALL)
-FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n?", re.DOTALL)
 MATH_HINTS = [r"\frac", r"\partial", r"\delta", r"\nabla", r"\odot", r"\sum", r"\begin{aligned}"]
 DURABLE_FOLDERS = ["03 Permanent Notes", "04 Concept Notes", "05 Bridge Notes", "06 Contradiction Notes"]
-LINK_LIST_FIELDS = {"source_trail", "origin_trail", "connects", "derived_from", "updates", "related"}
-
-CONTENT_ROOTS = {
-    "00 Fleeting Notes", "01 Sources", "02 Literature Notes", "03 Permanent Notes",
-    "04 Concept Notes", "05 Bridge Notes", "06 Contradiction Notes", "07 Index Notes",
-    "08 Wiki Articles",
-}
-RAW_INBOX_ROOT = "00 Inbox"
-DURABLE_ROOTS = CONTENT_ROOTS - {"00 Fleeting Notes"}
 # Path-qualified links are resolved by llmzk_tools.config so they can
 # optionally include the instance vault-relative prefix.
 
 
 def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
-
-
-def iter_md(root: Path, *, include_inbox: bool = False) -> Iterable[Path]:
-    # Audit durable/user-facing vault content. Raw inbox is separated so it does not pollute
-    # ordinary unresolved-link queues.
-    content_roots = set(CONTENT_ROOTS)
-    if include_inbox:
-        content_roots.add(RAW_INBOX_ROOT)
-    for p in root.rglob("*.md"):
-        try:
-            rel = p.relative_to(root)
-        except ValueError:
-            continue
-        if not rel.parts or rel.parts[0] not in content_roots:
-            continue
-        if p.name.lower() == "readme.md":
-            continue
-        yield p
-
-
-def markdown_note_title(path: Path) -> str:
-    """Return an Obsidian note title from a Markdown file path.
-
-    Avoid ``Path.stem`` here because note titles can legitimately contain
-    periods such as ``w.r.t.``. We only want to remove the final Markdown
-    suffix, not reinterpret parts of the title as file extensions.
-    """
-    name = path.name
-    return name[:-3] if name.endswith(".md") else name
-
-
-def title_locations(root: Path) -> dict[str, list[Path]]:
-    locations: dict[str, list[Path]] = defaultdict(list)
-    for p in iter_md(root, include_inbox=False):
-        locations[markdown_note_title(p)].append(p.relative_to(root))
-    return dict(locations)
-
-
-def note_stems(root: Path) -> set[str]:
-    return set(title_locations(root))
-
-
-def _strip_wikilink_target(raw: str) -> str:
-    target = raw.replace(r"\|", "|")
-    target = target.split("|", 1)[0]
-    target = target.split("#", 1)[0]
-    target = target.strip().strip("/")
-    if target.endswith(".md"):
-        target = target[:-3]
-    return target.strip()
-
-
-def target_stem(target: str) -> str:
-    """Return the comparable note title from raw wikilink target text.
-
-    Wikilinks are not filesystem paths. Do not call ``Path(target).stem`` on
-    raw wikilink targets, because titles such as ``w.r.t. weighted input``
-    would be truncated as if they had a suffix.
-    """
-    target = _strip_wikilink_target(target)
-    if "/" in target:
-        target = target.rsplit("/", 1)[-1]
-    return target.strip()
-
-
-def raw_target(target: str) -> str:
-    return _strip_wikilink_target(target)
-
-
-def is_local_heading_target(raw: str) -> bool:
-    inner = raw.replace(r"\|", "|").split("|", 1)[0].strip()
-    return inner.startswith("#")
-
-
-def is_exact_path_target(raw: str) -> bool:
-    target = raw_target(raw)
-    return "/" in target
 
 
 def exact_target_path(raw: str, config: LlmzkConfig) -> PurePosixPath | None:
@@ -120,7 +45,7 @@ def exact_target_path(raw: str, config: LlmzkConfig) -> PurePosixPath | None:
     ``vault_relative_prefix`` is configured (``AI/04 Concept Notes/X``).
     Unknown prefixes still fail instead of silently resolving by basename.
     """
-    target = raw_target(raw)
+    target = strip_wikilink_target(raw)
     if not target or "/" not in target:
         return None
     local_target = config.to_local_target(target)
@@ -137,13 +62,6 @@ def wikilink_resolves(root: Path, raw: str, locations: dict[str, list[Path]], co
         return False
     title = target_stem(raw)
     return bool(title and title in locations)
-
-
-def split_frontmatter(text: str) -> tuple[str | None, str]:
-    match = FRONTMATTER_RE.match(text)
-    if not match:
-        return None, text
-    return match.group(1), text[match.end():]
 
 
 def has_nested_singleton_list(value: Any) -> bool:
@@ -189,7 +107,7 @@ def audit_frontmatter(path: Path, text: str, rel: Path, locations: dict[str, lis
                     if r"\|" in item:
                         issues.append(f"{rel}: `{field}` contains escaped pipe: {item!r}")
                     if field == "origin_trail" and item.startswith("[[") and item.endswith("]]" ):
-                        target = config.to_local_target(raw_target(item[2:-2]))
+                        target = config.to_local_target(strip_wikilink_target(item[2:-2]))
                         title = target_stem(target)
                         if _duplicate_fleeting_and_durable(title, locations) and "/" not in target:
                             issues.append(
@@ -214,7 +132,7 @@ def duplicate_title_issues(locations: dict[str, list[Path]]) -> list[str]:
 
 def ambiguous_link_issue(rel: Path, raw: str, locations: dict[str, list[Path]]) -> str | None:
     """Warn when a durable note links by basename to a duplicate fleeting/durable title."""
-    target = raw_target(raw)
+    target = strip_wikilink_target(raw)
     if "/" in target:
         return None
     title = target_stem(raw)

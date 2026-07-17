@@ -15,9 +15,13 @@ from pathlib import Path
 from typing import Annotated, Literal, Union
 
 import tyro
-import yaml
 
-FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n?", re.DOTALL)
+from llmzk_tools.finding import Finding, add
+from llmzk_tools.frontmatter import (
+    parse_frontmatter as split_frontmatter,
+    dump_yaml_value,
+)
+
 CHECKBOX_RE = re.compile(r"^\s*- \[(?P<mark>[ xX])\]\s+(?P<text>.+?)\s*$")
 HEADING_RE = re.compile(r"^(?P<hashes>#{2,6})\s+(?P<title>.+?)\s*$")
 
@@ -41,12 +45,6 @@ NOTE_TYPE_HEADINGS = [
 
 VALID_STATUSES = {"proposed", "edited", "applied", "rejected", "superseded"}
 VALID_MODES = {"ingest", "promote"}
-
-
-@dataclass
-class Finding:
-    level: Literal["ok", "warn", "fail"]
-    message: str
 
 
 @dataclass
@@ -79,18 +77,6 @@ Command = Union[
 ]
 
 
-def split_frontmatter(text: str) -> tuple[dict, str, str | None]:
-    match = FRONTMATTER_RE.match(text)
-    if not match:
-        return {}, text, None
-    raw = match.group(1)
-    try:
-        data = yaml.safe_load(raw) or {}
-    except yaml.YAMLError:
-        return {}, text[match.end():], raw
-    return data if isinstance(data, dict) else {}, text[match.end():], raw
-
-
 def normalize_frontmatter_value(value):
     if isinstance(value, dt.datetime):
         return value.isoformat(timespec="seconds")
@@ -116,45 +102,6 @@ def normalize_frontmatter_data(data: dict) -> dict:
 
 def now_iso() -> str:
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
-
-
-def quote_yaml_string(value: str) -> str:
-    return '"' + value.replace('"', '\"') + '"'
-
-
-def is_date_like(value: str) -> bool:
-    return bool(re.match(r"^\d{4}-\d{2}-\d{2}(?:T|$)", value))
-
-
-def format_scalar(value) -> str:
-    value = normalize_frontmatter_value(value)
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        if is_date_like(value) or ":" in value or "#" in value or "[" in value or "]" in value or "/" in value:
-            return quote_yaml_string(value)
-        return value
-    return str(value)
-
-
-def dump_yaml_value(lines: list[str], key: str, value, indent: int = 0) -> None:
-    pad = " " * indent
-    value = normalize_frontmatter_value(value)
-    if isinstance(value, dict):
-        lines.append(f"{pad}{key}:")
-        for child_key, child_value in value.items():
-            dump_yaml_value(lines, str(child_key), child_value, indent + 2)
-    elif isinstance(value, list):
-        if not value:
-            lines.append(f"{pad}{key}: []")
-        else:
-            lines.append(f"{pad}{key}:")
-            for item in value:
-                lines.append(f"{pad}  - {format_scalar(item)}")
-    else:
-        lines.append(f"{pad}{key}: {format_scalar(value)}")
 
 
 def dump_frontmatter(data: dict, body: str) -> str:
@@ -184,10 +131,6 @@ def checkbox_items(body: str) -> list[tuple[bool, str]]:
         mark = match.group("mark").lower()
         items.append((mark == "x", match.group("text").strip()))
     return items
-
-
-def add(findings: list[Finding], level: Literal["ok", "warn", "fail"], message: str) -> None:
-    findings.append(Finding(level, message))
 
 
 def validate_review(path: Path) -> tuple[int, list[Finding]]:

@@ -15,6 +15,8 @@ from typing import Annotated, Any, Union
 from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
 import tyro
 
+from llmzk_tools.git_util import porcelain
+
 try:
     import yaml
 except Exception:  # pragma: no cover
@@ -82,11 +84,6 @@ def repo_root(path: Path) -> tuple[Repo, Path]:
     if repo.working_tree_dir is None:
         raise SystemExit("Git repository has no working tree. Run from a normal vault checkout.")
     return repo, Path(repo.working_tree_dir).resolve()
-
-
-def porcelain(repo: Repo) -> list[str]:
-    out = repo.git.status("--porcelain=v1")
-    return [line for line in out.splitlines() if line.strip()]
 
 
 def run_status(args: Status) -> int:

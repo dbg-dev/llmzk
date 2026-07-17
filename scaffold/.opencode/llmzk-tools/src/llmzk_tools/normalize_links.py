@@ -5,73 +5,18 @@ This script is intentionally mechanical. It does not create notes.
 """
 from __future__ import annotations
 
-from collections import defaultdict
 from pathlib import Path
 import re
 
 import tyro
 
 from llmzk_tools.config import LlmzkConfig, load_config
-
-WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
-KNOWN_ROOTS = [
-    "00 Inbox", "00 Fleeting Notes", "01 Sources", "02 Literature Notes",
-    "03 Permanent Notes", "04 Concept Notes", "05 Bridge Notes",
-    "06 Contradiction Notes", "07 Index Notes", "08 Wiki Articles", "09 Media",
-    "Logs/Passports", "Logs/Decision Logs", "Logs/Review Queue", "Logs/Candidate Reviews",
-]
-DURABLE_ROOTS = {
-    "01 Sources", "02 Literature Notes", "03 Permanent Notes", "04 Concept Notes",
-    "05 Bridge Notes", "06 Contradiction Notes", "07 Index Notes", "08 Wiki Articles",
-}
-
-
-def markdown_note_title(path: Path) -> str:
-    name = path.name
-    return name[:-3] if name.endswith(".md") else name
-
-
-def iter_markdown(root: Path):
-    skip = {".venv", ".git", "__pycache__", "__MACOSX"}
-    for path in root.rglob("*.md"):
-        if any(part in skip for part in path.parts):
-            continue
-        yield path
-
-
-def build_title_locations(root: Path) -> dict[str, list[Path]]:
-    locations: dict[str, list[Path]] = defaultdict(list)
-    for path in iter_markdown(root):
-        try:
-            rel = path.relative_to(root)
-        except ValueError:
-            continue
-        if rel.parts and rel.parts[0] in {r.split('/')[0] for r in KNOWN_ROOTS}:
-            locations[markdown_note_title(path)].append(rel)
-    return dict(locations)
-
-
-def _is_fleeting(rel: Path) -> bool:
-    return str(rel).startswith("00 Fleeting Notes/")
-
-
-def _is_durable(rel: Path) -> bool:
-    return bool(rel.parts and rel.parts[0] in DURABLE_ROOTS)
-
-
-def preferred_durable_path(title: str, locations: dict[str, list[Path]] | None) -> str | None:
-    if not locations:
-        return None
-    locs = locations.get(title, [])
-    has_fleeting = any(_is_fleeting(loc) for loc in locs)
-    durable = [loc for loc in locs if _is_durable(loc)]
-    if not has_fleeting or not durable:
-        return None
-    # Prefer concept notes when present, otherwise the first durable path.
-    durable = sorted(durable, key=lambda loc: (0 if str(loc).startswith("04 Concept Notes/") else 1, str(loc)))
-    rel = durable[0]
-    text = str(rel)
-    return text[:-3] if text.endswith(".md") else text
+from llmzk_tools.paths import (
+    iter_markdown,
+    build_title_locations,
+    preferred_durable_path,
+)
+from llmzk_tools.wikilink import WIKILINK_RE
 
 
 def normalize_target(target: str, locations: dict[str, list[Path]] | None = None, config: LlmzkConfig | None = None) -> str:
