@@ -8,7 +8,7 @@ from git import GitCommandError
 import tyro
 
 from llmzk_tools import __version__
-from llmzk_tools.config import load_config
+from llmzk_tools.config import load_config_result
 from llmzk_tools.finding import Finding, add
 from llmzk_tools.git_util import find_repo, porcelain
 from llmzk_tools.manifest import (
@@ -184,40 +184,53 @@ def check_llmzk_config(findings: list[Finding], root: Path) -> None:
     if not path.exists():
         add(findings, "fail", "Missing llmzk instance config: .llmzk.yaml")
         return
-    text = path.read_text(encoding="utf-8")
-    required_keys = ["schema_version:", "instance_name:", "vault_relative_prefix:", "link_style:"]
-    metadata_keys = ["installed_version:", "install_mode:", "source_path:"]
-    for key in required_keys:
-        if key in text:
-            add(findings, "ok", f"llmzk config contains: {key[:-1]}")
-        else:
-            add(findings, "fail", f"llmzk config missing key: {key[:-1]}")
-    for key in metadata_keys:
-        if key in text:
-            add(findings, "ok", f"llmzk config contains: {key[:-1]}")
-        else:
-            add(findings, "warn", f"llmzk config missing update metadata: {key[:-1]}")
-    if "link_style: vault_relative" in text and ("vault_relative_prefix: \"\"" in text or "vault_relative_prefix: ''" in text):
+
+    result = load_config_result(root)
+    for error in result.errors:
+        add(findings, "fail", f"Invalid .llmzk.yaml: {error}")
+    for warning in result.warnings:
+        add(findings, "warn", f".llmzk.yaml: {warning}")
+    if result.errors:
+        return
+
+    cfg = result.config
+    add(findings, "ok", f"llmzk config matches schema version {cfg.schema_version}")
+
+    if cfg.link_style == "vault_relative" and not cfg.prefix:
         add(findings, "warn", "link_style is vault_relative but vault_relative_prefix is empty")
-    cfg = load_config(root)
-    if not cfg.installed_version:
+
+    if "installed_version" not in result.present_keys:
+        add(findings, "warn", "llmzk config missing update metadata: installed_version")
+    elif not cfg.installed_version:
         add(findings, "warn", "llmzk config has no installed_version; run llmzk update after upgrading")
     elif cfg.installed_version != __version__:
-        add(findings, "warn", f"Version mismatch: .llmzk.yaml says {cfg.installed_version}, tools say {__version__}")
+        add(
+            findings,
+            "warn",
+            f"Version mismatch: .llmzk.yaml says {cfg.installed_version}, tools say {__version__}",
+        )
     else:
         add(findings, "ok", f"llmzk version metadata matches tools: {__version__}")
-    if cfg.install_mode not in {"copy", "symlink"}:
-        add(findings, "warn", f"Unknown install_mode in .llmzk.yaml: {cfg.install_mode}")
+
+    if "install_mode" not in result.present_keys:
+        add(findings, "warn", "llmzk config missing update metadata: install_mode")
     else:
         add(findings, "ok", f"Install mode recorded: {cfg.install_mode}")
-    if cfg.install_mode == "symlink":
-        for rel in [".opencode", "Templates"]:
-            path = root / rel
-            if path.is_symlink():
-                add(findings, "ok", f"Symlink install path is a symlink: {rel}")
-            else:
-                add(findings, "warn", f"install_mode is symlink but path is not a symlink: {rel}")
-    if cfg.source_path:
+        if cfg.install_mode == "symlink":
+            for rel in [".opencode", "Templates"]:
+                install_path = root / rel
+                if install_path.is_symlink():
+                    add(findings, "ok", f"Symlink install path is a symlink: {rel}")
+                else:
+                    add(
+                        findings,
+                        "warn",
+                        f"install_mode is symlink but path is not a symlink: {rel}",
+                    )
+
+    if "source_path" not in result.present_keys:
+        add(findings, "warn", "llmzk config missing update metadata: source_path")
+    elif cfg.source_path:
         source = Path(cfg.source_path).expanduser()
         if source.exists():
             add(findings, "ok", f"Recorded source_path exists: {cfg.source_path}")
@@ -225,7 +238,6 @@ def check_llmzk_config(findings: list[Finding], root: Path) -> None:
             add(findings, "warn", f"Recorded source_path does not exist: {cfg.source_path}")
     else:
         add(findings, "warn", "No source_path recorded; update needs --source")
-
 def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = False) -> tuple[int, list[Finding]]:
     root = vault.expanduser().resolve()
     findings: list[Finding] = []

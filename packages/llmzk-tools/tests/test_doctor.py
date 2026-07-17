@@ -390,7 +390,7 @@ def test_check_llmzk_config_warns_on_empty_prefix_with_vault_relative(tmp_path: 
     assert any("vault_relative_prefix is empty" in m for m in finding_messages(findings, "warn"))
 
 
-def test_check_llmzk_config_warns_on_unknown_install_mode(tmp_path: Path) -> None:
+def test_check_llmzk_config_fails_on_unknown_install_mode(tmp_path: Path) -> None:
     write_config(tmp_path, instance_name="x", install_mode="copy")
     (tmp_path / ".llmzk.yaml").write_text(
         "schema_version: 1\ninstance_name: x\nvault_relative_prefix: ''\nlink_style: local\n"
@@ -399,7 +399,7 @@ def test_check_llmzk_config_warns_on_unknown_install_mode(tmp_path: Path) -> Non
     )
     findings: list[doctor_mod.Finding] = []
     doctor_mod.check_llmzk_config(findings, tmp_path)
-    assert any("Unknown install_mode" in m for m in finding_messages(findings, "warn"))
+    assert any("install_mode must be one of" in m for m in finding_messages(findings, "fail"))
 
 
 def test_check_llmzk_config_source_path_does_not_exist(tmp_path: Path) -> None:

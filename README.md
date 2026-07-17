@@ -1,6 +1,6 @@
 # llmzk
 
-Current version: v5.7.1
+Current version: v5.7.2
 
 `llmzk` is a lightweight OpenCode + Obsidian harness for building a Zettelkasten with LLM assistance.
 

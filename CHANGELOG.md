@@ -1,3 +1,10 @@
+# v5.7.2 — configuration schema validation
+
+- Validate `.llmzk.yaml` against an explicit seven-field schema at load time.
+- Reject malformed YAML, wrong field types, unsupported schema versions, and invalid enum values without tracebacks.
+- Report schema failures through doctor and block updates before reading the source scaffold.
+- Preserve safe default loading for non-strict read-only callers and warn on unknown configuration keys.
+
 # v5.7.1 — safe update-source validation
 
 - Refuse direct updates before drift planning when the source scaffold has not been assembled.

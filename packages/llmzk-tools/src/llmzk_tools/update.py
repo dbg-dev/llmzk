@@ -11,7 +11,7 @@ from typing import Iterable
 import tyro
 
 from llmzk_tools import __version__
-from llmzk_tools.config import load_config, write_config
+from llmzk_tools.config import load_config, load_config_result, write_config
 from llmzk_tools.git_util import git_dirty
 from llmzk_tools.manifest import ROOT_FILES, SYSTEM_DIRS, scaffold_managed_paths
 
@@ -225,7 +225,14 @@ def update(
     if not root.exists():
         print(f"Vault path does not exist: {root}")
         return 1
-    cfg = load_config(root)
+
+    config_result = load_config_result(root)
+    if config_result.errors:
+        print("Invalid .llmzk.yaml:")
+        for error in config_result.errors:
+            print(f"- {error}")
+        return 1
+    cfg = config_result.config
     if source is None:
         if cfg.source_path:
             source = Path(cfg.source_path)
