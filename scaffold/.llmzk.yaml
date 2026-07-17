@@ -5,6 +5,6 @@ schema_version: 1
 instance_name: root
 vault_relative_prefix: ""
 link_style: local
-installed_version: "0.5.6.1"
+installed_version: "0.5.7.1"
 install_mode: copy
 source_path: ""

@@ -1,6 +1,6 @@
 # llmzk
 
-Current version: v5.7
+Current version: v5.7.1
 
 `llmzk` is a lightweight OpenCode + Obsidian harness for building a Zettelkasten with LLM assistance.
 
@@ -66,6 +66,8 @@ This writes `.llmzk.yaml` so audit, normalize-links, fix-frontmatter, and benchm
 
 
 ## Updating an installed vault
+
+Use `scripts/update-vault.sh` from the upstream source checkout. It assembles the generated Python tooling before invoking the installed updater.
 
 From the upstream source checkout, run a dry-run first:
 

@@ -37,6 +37,14 @@ def test_build_and_drift_check(tmp_path: Path) -> None:
     clean = run_build("--target", str(target), "--check")
     assert clean.returncode == 0, clean.stderr or clean.stdout
 
+    (target / ".llmzk-generated").unlink()
+    missing_marker = run_build("--target", str(target), "--check")
+    assert missing_marker.returncode == 1
+    assert "missing: .llmzk-generated" in missing_marker.stdout
+
+    rebuilt = run_build("--target", str(target))
+    assert rebuilt.returncode == 0, rebuilt.stderr or rebuilt.stdout
+
     (target / "pyproject.toml").write_text("drift\n", encoding="utf-8")
     drift = run_build("--target", str(target), "--check")
     assert drift.returncode == 1

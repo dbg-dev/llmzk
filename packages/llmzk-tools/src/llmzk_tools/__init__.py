@@ -1,3 +1,3 @@
 """Deterministic tools for installed llmzk vaults."""
 
-__version__ = "0.5.7.0"
+__version__ = "0.5.7.1"

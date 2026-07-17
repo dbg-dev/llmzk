@@ -29,6 +29,11 @@ def make_source_repo(tmp_path: Path) -> tuple[Path, Path]:
     write(scaffold / "opencode.json", '{"instructions": ["AGENTS.md"]}\n')
     write(scaffold / ".gitignore", ".venv/\n__MACOSX/\n.DS_Store\n")
     write(scaffold / ".opencode/commands/llmzk-update.md", "new update command\n")
+    write(scaffold / ".opencode/llmzk-tools/.llmzk-generated", "generated\n")
+    write(
+        scaffold / ".opencode/llmzk-tools/pyproject.toml",
+        '[project]\nname = "llmzk-tools"\nversion = "0.0.0"\n',
+    )
     write(scaffold / ".opencode/llmzk-tools/src/llmzk_tools/update.py", "# update tool\n")
     write(scaffold / "Templates/concept-note.md", "new template\n")
     return source, scaffold
@@ -63,6 +68,44 @@ def assert_durable_sentinels_preserved(vault: Path) -> None:
 def test_source_scaffold_requires_scaffold_directory(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         update_mod.source_scaffold(tmp_path / "not-a-source-repo")
+
+
+@pytest.mark.parametrize("missing_name", [".llmzk-generated", "pyproject.toml"])
+def test_source_scaffold_requires_assembled_tools(
+    tmp_path: Path,
+    missing_name: str,
+) -> None:
+    source, scaffold = make_source_repo(tmp_path)
+    (scaffold / ".opencode" / "llmzk-tools" / missing_name).unlink()
+
+    with pytest.raises(FileNotFoundError, match="Source scaffold is not assembled"):
+        update_mod.source_scaffold(source)
+
+
+def test_update_rejects_unassembled_source_without_mutating_vault(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    source, scaffold = make_source_repo(tmp_path)
+    vault = make_vault(tmp_path)
+    installed_tool = write(
+        vault / ".opencode/llmzk-tools/pyproject.toml",
+        "installed tooling\n",
+    )
+    (scaffold / ".opencode/llmzk-tools/.llmzk-generated").unlink()
+
+    exit_code = update_mod.update(
+        vault,
+        source=source,
+        apply=True,
+        allow_dirty=True,
+    )
+
+    assert exit_code == 1
+    assert installed_tool.read_text(encoding="utf-8") == "installed tooling\n"
+    assert (vault / "AGENTS.md").read_text(encoding="utf-8") == "old agents\n"
+    assert_durable_sentinels_preserved(vault)
+    assert "Source scaffold is not assembled" in capsys.readouterr().out
 
 
 def test_iter_files_ignores_directories_git_caches_and_macos_metadata(tmp_path: Path) -> None:

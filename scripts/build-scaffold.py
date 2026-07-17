@@ -86,6 +86,10 @@ def relative_files(root: Path) -> set[Path]:
 
 def check(source: Path, target: Path) -> list[str]:
     problems: list[str] = []
+    marker = target / ".llmzk-generated"
+    if not marker.is_file():
+        problems.append("missing: .llmzk-generated")
+
     source_files = relative_files(source)
     target_files = relative_files(target) - {Path(".llmzk-generated")}
 

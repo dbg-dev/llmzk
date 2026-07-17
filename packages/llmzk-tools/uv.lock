@@ -148,7 +148,7 @@ wheels = [
 
 [[package]]
 name = "llmzk-tools"
-version = "0.5.7.0"
+version = "0.5.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "gitpython" },

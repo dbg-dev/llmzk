@@ -1,3 +1,11 @@
+# v5.7.1 — safe update-source validation
+
+- Refuse direct updates before drift planning when the source scaffold has not been assembled.
+- Require both `.opencode/llmzk-tools/.llmzk-generated` and its `pyproject.toml`.
+- Preserve installed tooling and durable notes when an unassembled source is rejected.
+- Make scaffold drift checks fail when the generated marker is missing.
+- Document `scripts/update-vault.sh` as the preferred update path.
+
 # v5.7 — source-first monorepo layout
 - Moved the authoritative Python tooling project from `scaffold/.opencode/llmzk-tools/` to `packages/llmzk-tools/`.
 - Added `scripts/build-scaffold.py` to generate the self-contained installed-vault copy before install and update operations.

@@ -45,8 +45,19 @@ def ignored(path: Path) -> bool:
 def source_scaffold(source: Path) -> Path:
     root = source.expanduser().resolve()
     scaffold = root / "scaffold"
-    if not scaffold.exists():
+    if not scaffold.is_dir():
         raise FileNotFoundError(f"Source repo does not contain scaffold/: {root}")
+
+    tools = scaffold / ".opencode" / "llmzk-tools"
+    marker = tools / ".llmzk-generated"
+    pyproject = tools / "pyproject.toml"
+    if not marker.is_file() or not pyproject.is_file():
+        raise FileNotFoundError(
+            "Source scaffold is not assembled: "
+            f"{tools}. Run scripts/update-vault.sh or "
+            "scripts/build-scaffold.py before using direct llmzk update."
+        )
+
     return scaffold
 
 
