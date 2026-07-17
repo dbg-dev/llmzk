@@ -141,6 +141,9 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Assemble the installed-vault package from packages/llmzk-tools.
+python3 "$REPO_ROOT/scripts/build-scaffold.py"
 if [[ -z "$SOURCE_PATH" ]]; then
   SOURCE_PATH="$REPO_ROOT"
 fi
@@ -220,7 +223,7 @@ schema_version: 1
 instance_name: "$INSTANCE_NAME"
 vault_relative_prefix: "$VAULT_PREFIX"
 link_style: "$LINK_STYLE"
-installed_version: "0.5.6.1"
+installed_version: "0.5.7.0"
 install_mode: "$MODE"
 source_path: "$SOURCE_PATH"
 CONFIG

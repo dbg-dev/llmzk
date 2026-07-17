@@ -1,6 +1,6 @@
 [project]
 name = "llmzk-tools"
-version = "0.5.6.1"
+version = "0.5.7.0"
 description = "Deterministic utilities for an installed llmzk OpenCode/Obsidian vault"
 readme = "README.md"
 requires-python = ">=3.11"

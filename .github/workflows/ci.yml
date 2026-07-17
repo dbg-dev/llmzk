@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-defaults:
-  run:
-    working-directory: scaffold/.opencode/llmzk-tools
-
 jobs:
   lint-and-test:
     name: Lint and test
@@ -26,10 +22,27 @@ jobs:
         run: uv python install 3.11
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --project packages/llmzk-tools --all-extras
 
-      - name: Lint
-        run: uv run ruff check src tests
+      - name: Lint Python
+        run: >-
+          uv run --project packages/llmzk-tools ruff check
+          packages/llmzk-tools/src
+          packages/llmzk-tools/tests
+          scripts/build-scaffold.py
+          tests/integration
+
+      - name: Check shell syntax
+        run: bash -n scripts/*.sh
 
       - name: Test
-        run: uv run pytest
+        run: >-
+          uv run --project packages/llmzk-tools pytest
+          packages/llmzk-tools/tests
+          tests/integration
+
+      - name: Build distributable scaffold
+        run: python3 scripts/build-scaffold.py
+
+      - name: Verify generated scaffold
+        run: python3 scripts/build-scaffold.py --check

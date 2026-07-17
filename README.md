@@ -1,6 +1,6 @@
 # llmzk
 
-Current version: v5.6
+Current version: v5.7
 
 `llmzk` is a lightweight OpenCode + Obsidian harness for building a Zettelkasten with LLM assistance.
 
@@ -167,25 +167,24 @@ Git                   = vault safety and rollback boundary
 
 ## Python CLI implementation
 
-There is no root Python package in this source repo. Runtime Python tools live only in the scaffold at:
+The deterministic Python tools have one editable source location:
 
-```text
-scaffold/.opencode/llmzk-tools/
-```
+    packages/llmzk-tools/
 
-That package exposes console scripts with `[project.scripts]`, uses `tyro` for CLIs, and uses `GitPython` for Git-facing operations.
+Before installation or update, `scripts/build-scaffold.py` generates the installed-vault copy at `scaffold/.opencode/llmzk-tools/`. The generated directory is ignored by Git and must not be edited directly.
 
+The installed copy remains self-contained, exposes console scripts with `[project.scripts]`, uses `tyro` for CLIs, and uses `GitPython` for Git-facing operations.
 ## Repository layout
 
-```text
-scripts/init-vault.sh             Bash installer for creating a concrete vault
-scaffold/                         files installed into a vault
-scaffold/.opencode/llmzk-tools/   installed-vault Python tools package
-scaffold/.opencode/bin/llmzk      installed-vault wrapper
-scaffold/Templates/               reusable note templates
-```
-
-
+    packages/llmzk-tools/             authoritative Python tools package
+    scripts/build-scaffold.py         assemble the distributable scaffold
+    scripts/init-vault.sh             create a concrete vault
+    scripts/update-vault.sh           update an installed vault
+    scaffold/                         static installed-vault files
+    scaffold/.opencode/llmzk-tools/   generated installed-vault package
+    scaffold/.opencode/bin/llmzk      installed-vault wrapper
+    scaffold/Templates/               reusable note templates
+    tests/integration/                source/distribution boundary tests
 ## v5.5.1 notes
 
 This release adds subfolder-aware linking through `.llmzk.yaml`, `--vault-prefix`, prefix-aware audit/normalization, and benchmark canonicalisation for vault-relative links.

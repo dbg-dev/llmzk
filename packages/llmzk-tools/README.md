@@ -2,7 +2,7 @@
 
 Deterministic utilities used inside an installed `llmzk` vault.
 
-This is the runtime Python project for the installed vault. It intentionally lives under `.opencode/llmzk-tools/` so the vault root does not need to be a Python project.
+This directory is the authoritative source package in the llmzk monorepo. `scripts/build-scaffold.py` copies it into `.opencode/llmzk-tools/` when assembling an installed vault, so the vault root itself does not need to be a Python project.
 
 ## CLI entry points
 

@@ -1,3 +1,10 @@
+# v5.7 — source-first monorepo layout
+- Moved the authoritative Python tooling project from `scaffold/.opencode/llmzk-tools/` to `packages/llmzk-tools/`.
+- Added `scripts/build-scaffold.py` to generate the self-contained installed-vault copy before install and update operations.
+- Kept the installed CLI and `.opencode/llmzk-tools` runtime layout unchanged.
+- Added root-level build, lint, test, and generated-scaffold checks.
+- Updated CI to test the source package and the source-to-distribution boundary from the repository root.
+
 # v5.6.1 — Update workflow unit tests
 
 - Added pytest unit tests for the v5.6 maintenance/update code path.

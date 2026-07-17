@@ -83,6 +83,9 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Assemble the installed-vault package from packages/llmzk-tools.
+python3 "$REPO_ROOT/scripts/build-scaffold.py"
 VAULT="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).expanduser().resolve())' "$VAULT_PATH")"
 
 if [[ ! -x "$VAULT/.opencode/bin/llmzk" ]]; then
