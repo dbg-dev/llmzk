@@ -21,14 +21,21 @@ from llmzk_tools.benchmark import (
     excluded_by_spec,
     exclude_patterns,
     existing_paths,
+    extract_wikilink_targets,
+    find_missing_needles,
     glob_candidates,
     glob_matches,
+    has_artifact_with_status,
     ignored_benchmark_path,
+    matches_exclude_pattern,
+    overall_stats,
     path_candidates,
     path_exists,
+    print_text_report,
     read_yaml,
     rel,
     resolve_item,
+    resolve_wikilink_candidates,
     results_to_json,
     run,
     run_case,
@@ -701,3 +708,178 @@ def test_run_no_cases_raises(tmp_path: Path):
     empty.mkdir()
     with pytest.raises(SystemExit, match="No benchmark.yaml"):
         run(empty, vault=vault)
+
+
+# --- find_missing_needles ---
+
+
+def test_find_missing_needles_all_present():
+    assert find_missing_needles("hello world", {"contains": ["hello", "world"]}) == []
+
+
+def test_find_missing_needles_some_missing():
+    missing = find_missing_needles("hello", {"contains": ["hello", "world"]})
+    assert "'world'" in missing[0]
+
+
+def test_find_missing_needles_contains_any_present():
+    assert find_missing_needles("JVP here", {"contains_any": ["JVP", "tangent"]}) == []
+
+
+def test_find_missing_needles_contains_any_missing():
+    missing = find_missing_needles("other", {"contains_any": ["JVP", "tangent"]})
+    assert len(missing) == 1
+    assert "one of" in missing[0]
+
+
+def test_find_missing_needles_both_contains_and_any_fail():
+    missing = find_missing_needles("other", {"contains": ["hello"], "contains_any": ["JVP"]})
+    assert len(missing) == 2
+
+
+def test_find_missing_needles_empty_spec():
+    assert find_missing_needles("text", {}) == []
+
+
+# --- extract_wikilink_targets ---
+
+
+def test_extract_wikilink_targets_basic():
+    text = "See [[X]] and [[Y|alias]]."
+    assert extract_wikilink_targets(text, CFG) == {"X", "Y"}
+
+
+def test_extract_wikilink_targets_with_path():
+    text = "See [[04 Concept Notes/X]]."
+    assert extract_wikilink_targets(text, CFG) == {"04 Concept Notes/X"}
+
+
+def test_extract_wikilink_targets_empty_text():
+    assert extract_wikilink_targets("no links", CFG) == set()
+
+
+def test_extract_wikilink_targets_strips_alias_and_heading():
+    text = "[[X|alias]] and [[Y#section]]"
+    assert extract_wikilink_targets(text, CFG) == {"X", "Y"}
+
+
+# --- resolve_wikilink_candidates ---
+
+
+def test_resolve_wikilink_candidates_string():
+    assert resolve_wikilink_candidates("X", CFG) == ["X"]
+
+
+def test_resolve_wikilink_candidates_wikilink_string():
+    assert resolve_wikilink_candidates("[[X]]", CFG) == ["X"]
+
+
+def test_resolve_wikilink_candidates_target_any_of():
+    result = resolve_wikilink_candidates({"target_any_of": ["X", "Y"]}, CFG)
+    assert result == ["X", "Y"]
+
+
+def test_resolve_wikilink_candidates_with_config_prefix():
+    cfg = LlmzkConfig(vault_relative_prefix="AI", link_style="vault_relative")
+    result = resolve_wikilink_candidates("AI/04 Concept Notes/X", cfg)
+    assert result == ["04 Concept Notes/X"]
+
+
+# --- has_artifact_with_status ---
+
+
+def test_has_artifact_with_status_found(tmp_path: Path):
+    p = write(tmp_path / "run.md", "---\nstatus: started\n---\n\n# Run\n")
+    assert has_artifact_with_status([p], "started")
+
+
+def test_has_artifact_with_status_not_found(tmp_path: Path):
+    p = write(tmp_path / "run.md", "---\nstatus: started\n---\n\n# Run\n")
+    assert not has_artifact_with_status([p], "applied")
+
+
+def test_has_artifact_with_status_no_frontmatter(tmp_path: Path):
+    p = write(tmp_path / "run.md", "# Run\n")
+    assert not has_artifact_with_status([p], "started")
+
+
+def test_has_artifact_with_status_empty_list():
+    assert not has_artifact_with_status([], "started")
+
+
+def test_has_artifact_with_status_any_match(tmp_path: Path):
+    p1 = write(tmp_path / "a.md", "---\nstatus: rejected\n---\n\n# A\n")
+    p2 = write(tmp_path / "b.md", "---\nstatus: applied\n---\n\n# B\n")
+    assert has_artifact_with_status([p1, p2], "applied")
+
+
+# --- matches_exclude_pattern ---
+
+
+def test_matches_exclude_pattern_fnmatch():
+    assert matches_exclude_pattern("tmp/x.md", "tmp/x.md", "tmp/*.md")
+
+
+def test_matches_exclude_pattern_folder_prefix():
+    assert matches_exclude_pattern("Logs/run.md", "Logs/run.md", "Logs")
+
+
+def test_matches_exclude_pattern_folder_prefix_with_slash():
+    assert matches_exclude_pattern("Logs/run.md", "Logs/run.md", "Logs/")
+
+
+def test_matches_exclude_pattern_no_match():
+    assert not matches_exclude_pattern("04 Concept Notes/X.md", "04 Concept Notes/X.md", "Logs")
+
+
+def test_matches_exclude_pattern_canonical_match():
+    assert matches_exclude_pattern("AI/04 Concept Notes/X.md", "04 Concept Notes/X.md", "04 Concept Notes")
+
+
+def test_matches_exclude_pattern_exact_path():
+    assert matches_exclude_pattern("x.md", "x.md", "x.md")
+
+
+# --- overall_stats ---
+
+
+def test_overall_stats_empty():
+    assert overall_stats([]) == (100.0, 0, 0, 0)
+
+
+def test_overall_stats_with_results():
+    r1 = CaseResult(name="a")
+    add(r1, "pass", "c", "m")
+    add(r1, "fail", "c", "m")
+    r2 = CaseResult(name="b")
+    add(r2, "pass", "c", "m")
+    add(r2, "warn", "c", "m")
+    score, p, w, f = overall_stats([r1, r2])
+    assert p == 2
+    assert w == 1
+    assert f == 1
+    assert score == 66.7
+
+
+# --- print_text_report ---
+
+
+def test_print_text_report_outputs_case_and_overall(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    r = CaseResult(name="test-case")
+    add(r, "pass", "check1", "ok")
+    add(r, "fail", "check2", "bad")
+    add(r, "warn", "check3", "maybe")
+    print_text_report([r], tmp_path / "bench", tmp_path / "vault")
+    out = capsys.readouterr().out
+    assert "test-case" in out
+    assert "[FAIL]" in out
+    assert "[WARN]" in out
+    assert "Overall:" in out
+
+
+def test_print_text_report_no_findings(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    r = CaseResult(name="clean")
+    print_text_report([r], tmp_path / "bench", tmp_path / "vault")
+    out = capsys.readouterr().out
+    assert "Score: 100.0/100" in out
+    assert "Overall:" in out

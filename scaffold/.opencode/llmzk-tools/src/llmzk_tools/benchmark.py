@@ -226,6 +226,22 @@ def exclude_patterns(spec: Any) -> list[str]:
     return [x for x in out if x]
 
 
+def matches_exclude_pattern(rel_path: str, canonical: str, variant: str) -> bool:
+    """Check if a path matches a single exclude pattern.
+
+    Handles fnmatch globbing and bare-folder prefix matching (e.g. "Logs"
+    matches "Logs/run.md").
+    """
+    if fnmatch.fnmatch(rel_path, variant) or fnmatch.fnmatch(canonical, variant):
+        return True
+    stripped = variant.rstrip("/")
+    if rel_path == stripped or rel_path.startswith(stripped + "/"):
+        return True
+    if canonical == stripped or canonical.startswith(stripped + "/"):
+        return True
+    return False
+
+
 def excluded_by_spec(path: Path, vault: Path, spec: Any, config: LlmzkConfig) -> bool:
     rel_path = rel(path, vault).replace("\\", "/")
     canonical = canonical_item(rel_path, config).replace("\\", "/")
@@ -233,13 +249,7 @@ def excluded_by_spec(path: Path, vault: Path, spec: Any, config: LlmzkConfig) ->
         pat = canonical_item(pattern, config).replace("\\", "/")
         variants = {pattern.replace("\\", "/"), pat}
         for variant in variants:
-            if fnmatch.fnmatch(rel_path, variant) or fnmatch.fnmatch(canonical, variant):
-                return True
-            # Treat a bare folder exclusion like "Logs" as "Logs/**".
-            stripped = variant.rstrip("/")
-            if rel_path == stripped or rel_path.startswith(stripped + "/"):
-                return True
-            if canonical == stripped or canonical.startswith(stripped + "/"):
+            if matches_exclude_pattern(rel_path, canonical, variant):
                 return True
     return False
 
@@ -282,6 +292,22 @@ def check_required_globs(result: CaseResult, vault: Path, items: list[dict[str, 
             add(result, "fail", "required_glob", f"{label} matched {len(matches)}, expected at least {min_count}; patterns={patterns}")
 
 
+def find_missing_needles(text: str, spec: dict[str, Any]) -> list[str]:
+    """Return descriptions of needles not found in text.
+
+    Checks both `contains` (all must be present) and `contains_any`
+    (at least one must be present). Returns an empty list if all pass.
+    """
+    missing: list[str] = []
+    for needle in spec.get("contains", []) or []:
+        if str(needle) not in text:
+            missing.append(repr(str(needle)))
+    any_needles = [str(n) for n in spec.get("contains_any", []) or []]
+    if any_needles and not any(n in text for n in any_needles):
+        missing.append("one of " + repr(any_needles))
+    return missing
+
+
 def check_required_text(result: CaseResult, vault: Path, items: list[dict[str, Any]], config: LlmzkConfig) -> None:
     for spec in items:
         targets = text_targets(vault, spec, config)
@@ -289,21 +315,11 @@ def check_required_text(result: CaseResult, vault: Path, items: list[dict[str, A
         if not targets:
             add(result, "fail", "required_text", f"no target matched {label}: {spec}")
             continue
-        # Default: every matching target must satisfy the text check. For alias
-        # specs, set target_mode: any to accept the first semantically equivalent
-        # note that satisfies the content condition.
         target_mode = str(spec.get("target_mode", "all"))
-        target_findings: list[tuple[Path, list[str]]] = []
-        for target in targets:
-            text = target.read_text(encoding="utf-8")
-            missing: list[str] = []
-            for needle in spec.get("contains", []) or []:
-                if str(needle) not in text:
-                    missing.append(repr(str(needle)))
-            any_needles = [str(n) for n in spec.get("contains_any", []) or []]
-            if any_needles and not any(n in text for n in any_needles):
-                missing.append("one of " + repr(any_needles))
-            target_findings.append((target, missing))
+        target_findings: list[tuple[Path, list[str]]] = [
+            (target, find_missing_needles(target.read_text(encoding="utf-8"), spec))
+            for target in targets
+        ]
 
         if target_mode == "any":
             ok_targets = [target for target, missing in target_findings if not missing]
@@ -356,6 +372,21 @@ def wikilink_target_candidates(spec: Any) -> list[str]:
     return list(dict.fromkeys(x for x in out if x))
 
 
+def extract_wikilink_targets(text: str, config: LlmzkConfig) -> set[str]:
+    """Extract canonicalized wikilink targets from note text."""
+    return {_wikilink_target(m.group(1), config) for m in WIKILINK_RE.finditer(text)}
+
+
+def resolve_wikilink_candidates(link: Any, config: LlmzkConfig) -> list[str]:
+    """Resolve a link spec into canonicalized expected target strings."""
+    candidates = wikilink_target_candidates(link)
+    expected: list[str] = []
+    for candidate in candidates:
+        inner = candidate[2:-2] if candidate.startswith("[[") and candidate.endswith("]]") else candidate
+        expected.append(_wikilink_target(inner, config))
+    return expected
+
+
 def check_required_wikilinks(result: CaseResult, vault: Path, items: list[dict[str, Any]], config: LlmzkConfig) -> None:
     for spec in items:
         targets = text_targets(vault, spec, config)
@@ -365,13 +396,9 @@ def check_required_wikilinks(result: CaseResult, vault: Path, items: list[dict[s
             continue
         for target in targets:
             text = target.read_text(encoding="utf-8")
-            actual_targets = {_wikilink_target(m.group(1), config) for m in WIKILINK_RE.finditer(text)}
+            actual_targets = extract_wikilink_targets(text, config)
             for link in spec.get("links", []) or []:
-                candidates = wikilink_target_candidates(link)
-                expected_targets = []
-                for candidate in candidates:
-                    inner = candidate[2:-2] if candidate.startswith("[[") and candidate.endswith("]]") else candidate
-                    expected_targets.append(_wikilink_target(inner, config))
+                expected_targets = resolve_wikilink_candidates(link, config)
                 if any(expected in actual_targets for expected in expected_targets):
                     add(result, "pass", "required_wikilink", f"{rel(target, vault)} has one of {expected_targets}")
                 else:
@@ -401,6 +428,15 @@ def check_audit(result: CaseResult, vault: Path, spec: dict[str, Any]) -> None:
             add(result, "fail", "audit_min", f"{key}: {count} < {minimum}")
 
 
+def has_artifact_with_status(matches: list[Path], status: str) -> bool:
+    """Check if any matched file has the given frontmatter status."""
+    for match in matches:
+        data, _ = split_frontmatter(match.read_text(encoding="utf-8"))
+        if data.get("status") == status:
+            return True
+    return False
+
+
 def check_review_artifacts(result: CaseResult, vault: Path, spec: dict[str, Any], config: LlmzkConfig) -> None:
     if not spec:
         return
@@ -419,13 +455,7 @@ def check_review_artifacts(result: CaseResult, vault: Path, spec: dict[str, Any]
                 continue
             wanted_status = item.get("status")
             if wanted_status:
-                ok = False
-                for match in matches:
-                    data, _ = split_frontmatter(match.read_text(encoding="utf-8"))
-                    if data.get("status") == wanted_status:
-                        ok = True
-                        break
-                if ok:
+                if has_artifact_with_status(matches, str(wanted_status)):
                     add(result, "pass", f"artifact_{group_name}_status", f"{label} has status {wanted_status}")
                 else:
                     add(result, "fail", f"artifact_{group_name}_status", f"{label} has no artifact with status {wanted_status}")
@@ -478,6 +508,34 @@ def results_to_json(results: list[CaseResult]) -> list[dict[str, Any]]:
     ]
 
 
+def overall_stats(results: list[CaseResult]) -> tuple[float, int, int, int]:
+    """Return (score, total_pass, total_warn, total_fail) across all results."""
+    total_pass = sum(r.passed for r in results)
+    total_warn = sum(r.warnings for r in results)
+    total_fail = sum(r.failed for r in results)
+    counted = total_pass + total_fail
+    score = 100.0 if counted == 0 else round(100.0 * total_pass / counted, 1)
+    return score, total_pass, total_warn, total_fail
+
+
+def print_text_report(results: list[CaseResult], benchmark_path: Path, vault: Path) -> None:
+    """Print human-readable benchmark results."""
+    print(f"llmzk benchmark: {benchmark_path}")
+    print(f"Vault: {vault}")
+    print()
+    for result in results:
+        print(f"## {result.name}")
+        print(f"Score: {result.score}/100  pass={result.passed} warn={result.warnings} fail={result.failed}")
+        for finding in result.findings:
+            if finding.level == "fail":
+                print(f"  [FAIL] {finding.check}: {finding.message}")
+            elif finding.level == "warn":
+                print(f"  [WARN] {finding.check}: {finding.message}")
+        print()
+    score, total_pass, total_warn, total_fail = overall_stats(results)
+    print(f"Overall: {score}/100  cases={len(results)} pass={total_pass} warn={total_warn} fail={total_fail}")
+
+
 def run(
     benchmark_path: tyro.conf.Positional[Path],
     vault: Path = Path("."),
@@ -494,24 +552,7 @@ def run(
     if json:
         print(json_lib.dumps(results_to_json(results), indent=2))
     else:
-        print(f"llmzk benchmark: {benchmark_path}")
-        print(f"Vault: {vault}")
-        print()
-        for result in results:
-            print(f"## {result.name}")
-            print(f"Score: {result.score}/100  pass={result.passed} warn={result.warnings} fail={result.failed}")
-            for finding in result.findings:
-                if finding.level == "fail":
-                    print(f"  [FAIL] {finding.check}: {finding.message}")
-                elif finding.level == "warn":
-                    print(f"  [WARN] {finding.check}: {finding.message}")
-            print()
-        total_pass = sum(r.passed for r in results)
-        total_warn = sum(r.warnings for r in results)
-        total_fail = sum(r.failed for r in results)
-        counted = total_pass + total_fail
-        score = 100.0 if counted == 0 else round(100.0 * total_pass / counted, 1)
-        print(f"Overall: {score}/100  cases={len(results)} pass={total_pass} warn={total_warn} fail={total_fail}")
+        print_text_report(results, benchmark_path, vault)
 
     failed = any(result.failed for result in results)
     warned = any(result.warnings for result in results)
