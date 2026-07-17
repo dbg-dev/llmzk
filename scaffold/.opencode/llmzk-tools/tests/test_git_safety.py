@@ -355,3 +355,43 @@ def test_run_revert_run_refuses_to_delete_directory(tmp_path: Path) -> None:
     with pytest.raises(SystemExit) as exc:
         run_revert_run(RevertRun(passport=p, path=tmp_path, apply=True))
     assert "Refusing to delete" in str(exc.value)
+
+
+def test_run_revert_run_refuses_path_escape(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = make_repo(tmp_path)
+    write(tmp_path / "a.md", "a\n")
+    commit_all(repo)
+    outside = tmp_path.parent / "outside-escape-target.txt"
+    outside.write_text("secret\n", encoding="utf-8")
+    p = tmp_path / "passport.yaml"
+    p.write_text(
+        f"outputs:\n  - ../../{outside.name}\n",
+        encoding="utf-8",
+    )
+    code = run_revert_run(RevertRun(passport=p, path=tmp_path, apply=True))
+    assert code == 0
+    assert outside.exists()
+    out = capsys.readouterr().out
+    assert "Refusing to touch path outside vault root" in out
+
+
+def test_run_revert_run_refuses_absolute_path_escape(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = make_repo(tmp_path)
+    write(tmp_path / "a.md", "a\n")
+    commit_all(repo)
+    target = tmp_path.parent / "absolute-escape.txt"
+    target.write_text("secret\n", encoding="utf-8")
+    p = tmp_path / "passport.yaml"
+    p.write_text(
+        f"outputs:\n  - {target}\n",
+        encoding="utf-8",
+    )
+    code = run_revert_run(RevertRun(passport=p, path=tmp_path, apply=True))
+    assert code == 0
+    assert target.exists()
+    out = capsys.readouterr().out
+    assert "Refusing to touch path outside vault root" in out

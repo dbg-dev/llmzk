@@ -225,6 +225,12 @@ def run_revert_run(args: RevertRun) -> int:
 
     for p in paths:
         rel = Path(p)
+        resolved = (root / rel).resolve()
+        try:
+            resolved.relative_to(root)
+        except ValueError:
+            print(f"Refusing to touch path outside vault root: {rel} -> {resolved}")
+            continue
         try:
             repo.git.ls_files("--error-unmatch", str(rel))
             repo.git.checkout("--", str(rel))
