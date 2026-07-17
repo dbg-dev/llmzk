@@ -161,7 +161,7 @@ def test_check_git_no_repo_fails(tmp_path: Path) -> None:
     assert any("not inside a Git repository" in m for m in finding_messages(findings, "fail"))
 
 
-def test_check_git_warns_when_root_is_not_repo_root(tmp_path: Path) -> None:
+def test_check_git_scopes_instance_inside_parent_repo(tmp_path: Path) -> None:
     parent = tmp_path / "parent"
     parent.mkdir()
     Repo.init(parent)
@@ -169,11 +169,8 @@ def test_check_git_warns_when_root_is_not_repo_root(tmp_path: Path) -> None:
     sub.mkdir()
     findings: list[doctor_mod.Finding] = []
     doctor_mod.check_git(findings, sub, fail_if_dirty=False)
-    assert any("Git root is" in m for m in finding_messages(findings, "warn"))
-
-
-# check_opencode_config
-
+    assert finding_messages(findings, "warn") == []
+    assert any("scoped to llmzk instance" in m for m in finding_messages(findings, "ok"))
 
 def test_check_opencode_config_missing_file_no_findings(tmp_path: Path) -> None:
     findings: list[doctor_mod.Finding] = []
@@ -454,15 +451,16 @@ def test_run_doctor_warn_does_not_fail_by_default(tmp_path: Path) -> None:
     assert code == 0
 
 
-def test_run_doctor_warn_fails_when_fail_if_dirty(tmp_path: Path) -> None:
+def test_run_doctor_non_git_warning_does_not_fail_when_fail_if_dirty(tmp_path: Path) -> None:
     vault = make_vault(tmp_path)
     (vault / "01 Sources" / ".gitkeep").unlink()
+    repo = Repo(vault)
+    repo.git.add(A=True)
+    repo.index.commit("remove folder placeholder")
+
     code, _ = doctor_mod.run_doctor(vault, fail_if_dirty=True)
-    assert code == 1
 
-
-# doctor CLI wrapper
-
+    assert code == 0
 
 def test_doctor_json_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     vault = make_vault(tmp_path)

@@ -10,7 +10,7 @@ import tyro
 from llmzk_tools import __version__
 from llmzk_tools.config import load_config_result
 from llmzk_tools.finding import Finding, add
-from llmzk_tools.git_util import find_repo, porcelain
+from llmzk_tools.git_util import find_repo as _find_repo, git_context, porcelain
 from llmzk_tools.manifest import (
     LOG_FOLDERS,
     REQUIRED_COMMANDS,
@@ -26,6 +26,10 @@ from llmzk_tools.manifest import (
 DOCTOR_ROOT_FILES = [*ROOT_FILES, ".llmzk.yaml"]
 
 
+def find_repo(root: Path):
+    """Backward-compatible repository lookup for existing callers and tests."""
+    return _find_repo(root)
+
 def check_exists(findings: list[Finding], root: Path, rel_paths: Iterable[str], *, kind: str) -> None:
     for rel in rel_paths:
         path = root / rel
@@ -36,24 +40,27 @@ def check_exists(findings: list[Finding], root: Path, rel_paths: Iterable[str], 
 
 
 def check_git(findings: list[Finding], root: Path, *, fail_if_dirty: bool) -> None:
-    repo = find_repo(root)
-    if repo is None or repo.working_tree_dir is None:
+    context = git_context(root)
+    if context is None:
         add(findings, "fail", "Vault is not inside a Git repository")
         return
 
-    git_root = Path(repo.working_tree_dir).resolve()
-    if git_root != root:
-        add(findings, "warn", f"Git root is {git_root}, not the supplied vault root {root}")
-    else:
+    if context.repo_root == root:
         add(findings, "ok", "Git repository detected at vault root")
+    else:
+        add(
+            findings,
+            "ok",
+            f"Git repository detected at {context.repo_root}; "
+            f"checks are scoped to llmzk instance {root}",
+        )
 
-    dirty = porcelain(repo)
+    dirty = porcelain(context.repo, context.pathspec)
     if not dirty:
         add(findings, "ok", "Git working tree is clean")
     else:
         level = "fail" if fail_if_dirty else "warn"
         add(findings, level, f"Git working tree is dirty ({len(dirty)} changed entries)")
-
 
 def check_opencode_config(findings: list[Finding], root: Path) -> None:
     path = root / "opencode.json"
@@ -94,10 +101,11 @@ def check_gitignore(findings: list[Finding], root: Path) -> None:
 def check_git_visibility(findings: list[Finding], root: Path) -> None:
     # Git safety depends on generated durable notes and run logs being visible to Git.
     # If these are ignored, git diff/status cannot be the review boundary.
-    repo = find_repo(root)
-    if repo is None:
+    context = git_context(root)
+    if context is None:
         add(findings, "warn", "Skipping Git visibility checks because vault is not a Git repository")
         return
+
     probes = [
         "01 Sources/__llmzk_doctor_probe__.md",
         "02 Literature Notes/__llmzk_doctor_probe__.md",
@@ -112,15 +120,15 @@ def check_git_visibility(findings: list[Finding], root: Path) -> None:
         "Logs/Candidate Reviews/__llmzk_doctor_probe__.md",
     ]
     for rel in probes:
+        repo_rel = (context.instance_prefix / rel).as_posix()
         try:
-            repo.git.check_ignore("-q", rel)
+            context.repo.git.check_ignore("-q", "--", repo_rel)
             add(findings, "fail", f"Git safety issue: generated output would be ignored: {rel}")
         except GitCommandError as exc:
             if exc.status == 1:
                 add(findings, "ok", f"Generated output is Git-visible: {rel}")
             else:
                 add(findings, "warn", f"Could not check Git visibility for {rel}: {exc}")
-
 
 def check_no_nested_git(findings: list[Finding], root: Path) -> None:
     for rel_root in [".opencode", "Templates"]:
@@ -262,10 +270,7 @@ def run_doctor(vault: Path, *, fail_if_dirty: bool = False, quiet_ok: bool = Fal
     check_git(findings, root, fail_if_dirty=fail_if_dirty)
 
     failures = [f for f in findings if f.level == "fail"]
-    warnings = [f for f in findings if f.level == "warn"]
     if failures:
-        exit_code = 1
-    elif warnings and fail_if_dirty:
         exit_code = 1
     else:
         exit_code = 0

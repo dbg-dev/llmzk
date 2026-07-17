@@ -12,10 +12,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated, Any, Union
 
-from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
+from git import GitCommandError, Repo
 import tyro
 
-from llmzk_tools.git_util import porcelain
+from llmzk_tools.git_util import (
+    GitContext,
+    git_context,
+    instance_to_repo_path,
+    porcelain,
+)
 
 try:
     import yaml
@@ -76,28 +81,42 @@ Command = Union[
 ]
 
 
+def require_context(path: Path) -> GitContext:
+    context = git_context(path)
+    if context is None:
+        raise SystemExit(
+            "Not inside a Git repository. Initialize Git first or run from the vault root."
+        )
+    return context
+
+
 def repo_root(path: Path) -> tuple[Repo, Path]:
-    try:
-        repo = Repo(path.expanduser().resolve(), search_parent_directories=True)
-    except (InvalidGitRepositoryError, NoSuchPathError):
-        raise SystemExit("Not inside a Git repository. Initialize Git first or run from the vault root.")
-    if repo.working_tree_dir is None:
-        raise SystemExit("Git repository has no working tree. Run from a normal vault checkout.")
-    return repo, Path(repo.working_tree_dir).resolve()
+    """Compatibility helper returning the repository and repository root."""
+    context = require_context(path)
+    return context.repo, context.repo_root
+
+
+def _scoped_lines(context: GitContext) -> list[str]:
+    return porcelain(context.repo, context.pathspec)
 
 
 def run_status(args: Status) -> int:
-    repo, root = repo_root(args.path)
+    context = require_context(args.path)
     try:
-        branch = repo.active_branch.name
+        branch = context.repo.active_branch.name
     except TypeError:
         branch = "(detached)"
-    lines = porcelain(repo)
-    print(f"Repository: {root}")
+
+    lines = _scoped_lines(context)
+    print(f"Repository: {context.repo_root}")
+    if context.instance_root != context.repo_root:
+        print(f"llmzk instance: {context.instance_root}")
     print(f"Branch: {branch}")
+
     if not lines:
         print("Working tree: clean")
         return 0
+
     print(f"Working tree: dirty ({len(lines)} changed entries)")
     print()
     for line in lines[: args.limit]:
@@ -108,13 +127,17 @@ def run_status(args: Status) -> int:
 
 
 def run_preflight(args: Preflight) -> int:
-    repo, _ = repo_root(args.path)
-    lines = porcelain(repo)
+    context = require_context(args.path)
+    lines = _scoped_lines(context)
     if not lines:
         print("Preflight: clean working tree. Safe to start a broad llmzk run.")
         return 0
+
     print("Preflight: working tree is dirty.")
-    print("Review or commit/revert existing changes before a broad llmzk run, or explicitly allow mixing changes.")
+    print(
+        "Review or commit/revert existing changes before a broad llmzk run, "
+        "or explicitly allow mixing changes."
+    )
     print()
     for line in lines[: args.limit]:
         print(line)
@@ -123,22 +146,46 @@ def run_preflight(args: Preflight) -> int:
     return 1
 
 
+def _diff_pathspecs(context: GitContext, files: list[str]) -> list[str]:
+    if not files:
+        return [] if context.pathspec == "." else [context.pathspec]
+
+    pathspecs: list[str] = []
+    for raw in files:
+        try:
+            _local_rel, _resolved, repo_rel = instance_to_repo_path(context, raw)
+        except ValueError as exc:
+            raise SystemExit(
+                f"Refusing diff path outside llmzk instance: {raw} ({exc})"
+            ) from exc
+        pathspecs.append(repo_rel)
+    return pathspecs
+
+
+def _diff(repo: Repo, options: list[str], pathspecs: list[str]) -> str:
+    args = [*options]
+    if pathspecs:
+        args.extend(["--", *pathspecs])
+    return repo.git.diff(*args).rstrip()
+
+
 def run_diff(args: Diff) -> int:
-    repo, _ = repo_root(args.path)
+    context = require_context(args.path)
+    pathspecs = _diff_pathspecs(context, args.files)
+
     if args.stat:
-        print(repo.git.diff("--stat").rstrip())
-        staged = repo.git.diff("--cached", "--stat").rstrip()
+        print(_diff(context.repo, ["--stat"], pathspecs))
+        staged = _diff(context.repo, ["--cached", "--stat"], pathspecs)
         if staged:
             print("\nStaged changes:")
             print(staged)
         return 0
+
     if args.name_only:
-        print(repo.git.diff("--name-only").rstrip())
+        print(_diff(context.repo, ["--name-only"], pathspecs))
         return 0
-    if args.files:
-        print(repo.git.diff("--", *args.files).rstrip())
-    else:
-        print(repo.git.diff().rstrip())
+
+    print(_diff(context.repo, [], pathspecs))
     return 0
 
 
@@ -168,8 +215,8 @@ def flatten_paths(value: Any) -> list[str]:
         for item in value:
             paths.extend(flatten_paths(item))
     elif isinstance(value, dict):
-        for v in value.values():
-            paths.extend(flatten_paths(v))
+        for nested in value.values():
+            paths.extend(flatten_paths(nested))
     return paths
 
 
@@ -187,13 +234,13 @@ def run_commit_message(args: CommitMessage) -> int:
     print()
     if input_data:
         print("Input:")
-        for p in flatten_paths(input_data):
-            print(f"- {p}")
+        for path in flatten_paths(input_data):
+            print(f"- {path}")
         print()
     if output_paths:
         print("Created/updated:")
-        for p in output_paths[:30]:
-            print(f"- {p}")
+        for path in output_paths[:30]:
+            print(f"- {path}")
         if len(output_paths) > 30:
             print(f"- ... {len(output_paths) - 30} more")
         print()
@@ -203,7 +250,7 @@ def run_commit_message(args: CommitMessage) -> int:
 
 
 def run_revert_run(args: RevertRun) -> int:
-    repo, root = repo_root(args.path)
+    context = require_context(args.path)
     passport_path = args.passport.expanduser().resolve()
     data = load_passport(passport_path)
     outputs = data.get("outputs") or {}
@@ -213,9 +260,10 @@ def run_revert_run(args: RevertRun) -> int:
         return 1
 
     print("Files associated with this run:")
-    for p in paths:
-        print(f"- {p}")
+    for path in paths:
+        print(f"- {path}")
     print()
+
     # Dry-run is the default. `dry_run` is retained for compatibility with existing commands.
     _ = args.dry_run
     if not args.apply:
@@ -223,25 +271,25 @@ def run_revert_run(args: RevertRun) -> int:
         print("To apply, rerun with --apply after explicit user approval.")
         return 0
 
-    for p in paths:
-        rel = Path(p)
-        resolved = (root / rel).resolve()
+    for raw in paths:
         try:
-            resolved.relative_to(root)
+            local_rel, target, repo_rel = instance_to_repo_path(context, raw)
         except ValueError:
-            print(f"Refusing to touch path outside vault root: {rel} -> {resolved}")
+            print(f"Refusing to touch path outside vault root: {raw}")
             continue
+
         try:
-            repo.git.ls_files("--error-unmatch", str(rel))
-            repo.git.checkout("--", str(rel))
-            print(f"Restored tracked file: {rel}")
+            context.repo.git.ls_files("--error-unmatch", "--", repo_rel)
+            context.repo.git.checkout("--", repo_rel)
+            print(f"Restored tracked file: {local_rel}")
         except GitCommandError:
-            target = root / rel
             if target.exists():
                 if target.is_dir():
-                    raise SystemExit(f"Refusing to delete generated directory automatically: {rel}")
+                    raise SystemExit(
+                        f"Refusing to delete generated directory automatically: {local_rel}"
+                    )
                 target.unlink()
-                print(f"Deleted untracked generated file: {rel}")
+                print(f"Deleted untracked generated file: {local_rel}")
     return 0
 
 

@@ -1,6 +1,6 @@
 # llmzk
 
-Current version: v5.7.2
+Current version: v5.8
 
 `llmzk` is a lightweight OpenCode + Obsidian harness for building a Zettelkasten with LLM assistance.
 
@@ -62,7 +62,7 @@ An Obsidian vault can contain multiple llmzk instances, for example `Vault/AI/` 
 ./scripts/init-vault.sh ~/Obsidian/AI --vault-prefix AI --mode copy --git --commit
 ```
 
-This writes `.llmzk.yaml` so audit, normalize-links, fix-frontmatter, and benchmark can understand Obsidian-vault-relative links such as `[[AI/04 Concept Notes/Automatic differentiation|Automatic differentiation]]`.
+This writes `.llmzk.yaml` so audit, normalize-links, fix-frontmatter, and benchmark can understand Obsidian-vault-relative links such as `[[AI/04 Concept Notes/Automatic differentiation|Automatic differentiation]]`. Git status, preflight, diff, dirty checks, doctor visibility checks, and run reversion are scoped to the `AI/` instance even when the outer Obsidian vault is the Git repository.
 
 
 ## Updating an installed vault

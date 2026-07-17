@@ -1,3 +1,12 @@
+# v5.8 — instance-scoped Git safety
+
+- Separate the enclosing Git repository root from the supplied llmzk instance root.
+- Scope status, preflight, diff, dirty checks, and updater safety to the instance.
+- Resolve passport output paths relative to the instance, protecting sibling vault content.
+- Prefix doctor Git-visibility probes correctly for nested instances.
+- Make `doctor --fail-if-dirty` fail only for dirty Git state, not unrelated warnings.
+- Add installed copy-mode install–doctor–update tests and parent-repository isolation coverage.
+
 # v5.7.2 — configuration schema validation
 
 - Validate `.llmzk.yaml` against an explicit seven-field schema at load time.
