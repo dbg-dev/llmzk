@@ -4,6 +4,11 @@ Use this file for llmzk writing taste. Use the installed `obsidian-markdown` ski
 
 ## General style
 
+- Write newly authored note prose in ASD-STE100 Simplified Technical English, using the applicable edition's writing rules and approved dictionary.
+- Use short, direct sentences, active voice, and one clear idea per sentence. Use approved words with their approved meanings and parts of speech.
+- Handle necessary technical names and verbs according to the standard. Preserve precise definitions, uncertainty, and mathematical meaning; do not replace a technical term with an inaccurate simplification.
+- Preserve direct quotations, source titles, proper names, equations, code, and required link targets exactly. Distinguish quoted source text from newly authored prose.
+- Check compliance against the applicable edition of the standard and its dictionary. Do not claim verified compliance without that check; flag uncertainty when the standard is unavailable.
 - Prefer bullets for main points.
 - Use short paragraphs only when needed.
 - Avoid generic AI summary language.

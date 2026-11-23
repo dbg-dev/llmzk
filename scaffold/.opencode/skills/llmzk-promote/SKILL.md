@@ -28,7 +28,7 @@ In write-approved mode, create or update approved items only:
 
 ## Required process
 
-1. Read `AGENTS.md`, `.opencode/docs/SOUL.md`, and `.opencode/docs/OBSIDIAN_SKILLS.md`.
+1. Read `AGENTS.md`, `.opencode/docs/SOUL.md`, `.opencode/docs/STYLE.md`, and `.opencode/docs/OBSIDIAN_SKILLS.md`. Apply the ASD-STE100 note-writing instructions in `STYLE.md`.
 2. Inspect the fleeting note or cluster.
 3. Produce a candidate inventory.
 4. If running in candidate-review mode, write a candidate review file in `Logs/Candidate Reviews/` and stop before durable notes.

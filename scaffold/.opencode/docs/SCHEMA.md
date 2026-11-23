@@ -12,6 +12,13 @@ schema_version: 1
 
 ## Provenance fields
 
+For source notes, record authors as a list of plain strings, not wikilinks:
+
+```yaml
+author:
+  - "Author name"
+```
+
 Use `source_trail` for external sources:
 
 ```yaml

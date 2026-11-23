@@ -8,7 +8,7 @@ For Obsidian syntax, wikilinks, frontmatter, embeds, and callouts, rely on the i
 
 ## Process
 
-1. Read `AGENTS.md`, `.opencode/docs/SOUL.md`, and `.opencode/docs/OBSIDIAN_SKILLS.md`.
+1. Read `AGENTS.md`, `.opencode/docs/SOUL.md`, `.opencode/docs/STYLE.md`, and `.opencode/docs/OBSIDIAN_SKILLS.md`. Apply the ASD-STE100 note-writing instructions in `STYLE.md`.
 2. Identify the topic index or cluster.
 3. Inspect concept, permanent, bridge, contradiction, and literature notes.
 4. Produce an outline before writing the article.
