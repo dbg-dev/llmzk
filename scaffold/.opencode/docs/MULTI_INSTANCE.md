@@ -61,6 +61,21 @@ Both forms can resolve during audit when the configured prefix is known, but the
 
 Unknown prefixes should not be silently accepted. For example, if `vault_relative_prefix: AI`, then `[[Maths/04 Concept Notes/X]]` should resolve only if the `Maths/...` file exists inside the current llmzk instance, which normally it should not.
 
+## External attachments
+
+If attachments are stored outside the instance, add their directories explicitly
+to `.llmzk.yaml`, relative to the instance root:
+
+```yaml
+attachment_roots:
+  - "../../img"
+```
+
+The audit indexes files recursively in these directories for embedded links.
+It accepts filenames such as `![[figure.png|caption|500]]` and paths beginning
+with the configured directory's name, such as `![[img/figure.png]]`.
+This does not expand the search scope for ordinary note links.
+
 ## Installing into a subfolder
 
 Use:
