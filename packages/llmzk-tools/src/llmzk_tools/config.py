@@ -31,6 +31,7 @@ class LlmzkConfig:
     installed_version: str = ""
     install_mode: str = "copy"  # copy | symlink
     source_path: str = ""
+    attachment_roots: tuple[str, ...] = ()
 
     @property
     def prefix(self) -> str:
@@ -83,6 +84,7 @@ CONFIG_SCHEMA: dict[str, ConfigField] = {
         str, False, "copy", frozenset({"copy", "symlink"})
     ),
     "source_path": ConfigField(str, False, ""),
+    "attachment_roots": ConfigField(list, False, []),
 }
 
 
@@ -184,6 +186,11 @@ def validate_config_data(data: Any) -> ConfigLoadResult:
 
         values[name] = value
 
+    attachment_roots = cast(list[object], values["attachment_roots"])
+    if any(not isinstance(item, str) or not item.strip() or Path(item).is_absolute() for item in attachment_roots):
+        errors.append("attachment_roots must contain non-empty relative paths")
+        attachment_roots = []
+
     prefix = normalize_prefix(cast(str, values["vault_relative_prefix"]))
     config = LlmzkConfig(
         schema_version=cast(int, values["schema_version"]),
@@ -193,6 +200,7 @@ def validate_config_data(data: Any) -> ConfigLoadResult:
         installed_version=cast(str, values["installed_version"]),
         install_mode=cast(str, values["install_mode"]),
         source_path=cast(str, values["source_path"]),
+        attachment_roots=tuple(cast(list[str], attachment_roots)),
     )
     return ConfigLoadResult(
         config=config,
@@ -247,7 +255,7 @@ def yaml_scalar(value: object) -> str:
     return " ".join(lines).strip()
 
 
-def write_config(root: Path, *, instance_name: str, vault_relative_prefix: str = "", link_style: str = "local", installed_version: str = "", install_mode: str = "copy", source_path: str = "") -> None:
+def write_config(root: Path, *, instance_name: str, vault_relative_prefix: str = "", link_style: str = "local", installed_version: str = "", install_mode: str = "copy", source_path: str = "", attachment_roots: tuple[str, ...] = ()) -> None:
     result = validate_config_data(
         {
             "schema_version": 1,
@@ -257,6 +265,7 @@ def write_config(root: Path, *, instance_name: str, vault_relative_prefix: str =
             "installed_version": str(installed_version),
             "install_mode": install_mode,
             "source_path": str(source_path),
+            "attachment_roots": list(attachment_roots),
         }
     )
     if result.errors:
@@ -274,5 +283,6 @@ def write_config(root: Path, *, instance_name: str, vault_relative_prefix: str =
         f"installed_version: {yaml_scalar(config.installed_version)}\n"
         f"install_mode: {yaml_scalar(config.install_mode)}\n"
         f"source_path: {yaml_scalar(config.source_path)}\n"
+        + (yaml.safe_dump({"attachment_roots": list(config.attachment_roots)}, sort_keys=False) if config.attachment_roots else "")
     )
     (root / ".llmzk.yaml").write_text(text, encoding="utf-8")

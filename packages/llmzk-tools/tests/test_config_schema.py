@@ -134,6 +134,7 @@ def test_write_config_round_trips_through_schema(tmp_path: Path) -> None:
         installed_version="0.5.7.2",
         install_mode="symlink",
         source_path="/tmp/source",
+        attachment_roots=("../../img",),
     )
 
     result = load_config_result(tmp_path)
@@ -141,6 +142,14 @@ def test_write_config_round_trips_through_schema(tmp_path: Path) -> None:
     assert result.valid
     assert result.config.instance_name == "research"
     assert result.config.install_mode == "symlink"
+    assert result.config.attachment_roots == ("../../img",)
+
+
+def test_validate_attachment_roots() -> None:
+    for value in ("../../img", ["/absolute"], [""], [42]):
+        data = valid_data()
+        data["attachment_roots"] = value
+        assert not validate_config_data(data).valid
 
 
 def test_write_config_rejects_values_outside_schema(tmp_path: Path) -> None:

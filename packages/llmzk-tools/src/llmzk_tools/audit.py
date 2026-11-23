@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import os
 import re
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -62,6 +63,34 @@ def wikilink_resolves(root: Path, raw: str, locations: dict[str, list[Path]], co
         return False
     title = target_stem(raw)
     return bool(title and title in locations)
+
+
+def embedded_file_index(root: Path, config: LlmzkConfig) -> tuple[set[str], set[str]]:
+    """Index vault files by relative path and filename for embedded attachments."""
+    paths: set[str] = set()
+    names: set[str] = set()
+    for base in [root, *(root / path for path in config.attachment_roots)]:
+        for directory, dirs, files in os.walk(base):
+            dirs[:] = [name for name in dirs if not name.startswith(".") and name not in {"__pycache__", "__MACOSX"}]
+            for name in files:
+                path = Path(directory) / name
+                if path.is_file():
+                    relative = path.relative_to(base)
+                    paths.add(relative.as_posix() if base == root else (Path(base.name) / relative).as_posix())
+                    names.add(name)
+    return paths, names
+
+
+def embedded_file_resolves(raw: str, config: LlmzkConfig, files: tuple[set[str], set[str]]) -> bool:
+    target = raw.replace(r"\|", "|").split("|", 1)[0].split("#", 1)[0].strip()
+    if not target or target.startswith("/"):
+        return False
+    target = config.to_local_target(target)
+    path = PurePosixPath(target)
+    if ".." in path.parts:
+        return False
+    paths, names = files
+    return target in paths if "/" in target else target in names
 
 
 def has_nested_singleton_list(value: Any) -> bool:
@@ -144,6 +173,7 @@ def ambiguous_link_issue(rel: Path, raw: str, locations: dict[str, list[Path]]) 
 def audit(root: Path) -> dict[str, list[str]]:
     config = load_config(root)
     locations = title_locations(root)
+    files = embedded_file_index(root, config)
     issues: dict[str, list[str]] = {
         "bad-link-formatting": [],
         "unresolved-links": [],
@@ -164,7 +194,10 @@ def audit(root: Path) -> dict[str, list[str]]:
             raw = m.group(1)
             if r"\|" in raw or raw.endswith(".md") or raw.startswith("/"):
                 issues["bad-link-formatting"].append(f"{rel}: [[{raw}]]")
-            if not wikilink_resolves(root, raw, locations, config):
+            embedded = m.start() > 0 and text[m.start() - 1] == "!"
+            if not wikilink_resolves(root, raw, locations, config) and not (
+                embedded and embedded_file_resolves(raw, config, files)
+            ):
                 issues["unresolved-links"].append(f"{rel}: [[{raw}]]")
             if rel.parts and rel.parts[0] in DURABLE_ROOTS:
                 issue = ambiguous_link_issue(rel, raw, locations)
@@ -191,7 +224,10 @@ def audit(root: Path) -> dict[str, list[str]]:
         rel = path.relative_to(root)
         for m in WIKILINK_RE.finditer(text):
             raw = m.group(1)
-            if not wikilink_resolves(root, raw, locations, config):
+            embedded = m.start() > 0 and text[m.start() - 1] == "!"
+            if not wikilink_resolves(root, raw, locations, config) and not (
+                embedded and embedded_file_resolves(raw, config, files)
+            ):
                 issues["raw-inbox-unresolved-links"].append(f"{rel}: [[{raw}]]")
 
     return issues

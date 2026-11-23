@@ -216,6 +216,7 @@ def _apply_update_unchecked(vault: Path, scaffold: Path, *, mode: str, source: P
         installed_version=__version__,
         install_mode=mode,
         source_path=str(source.expanduser().resolve()),
+        attachment_roots=cfg.attachment_roots,
     )
 
 
